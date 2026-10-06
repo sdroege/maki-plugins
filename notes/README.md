@@ -20,6 +20,10 @@ For cross-session, project-scoped notes use the built-in `memory` tool.
 - Prompt hints: a system-prompt nudge to save/read notes around compaction,
   and a compact-prompt hint listing the session's note filenames so the
   compaction summary tells the model what to read back.
+- A `CompactionDone` listener that wakes the session with an observation
+  naming the surviving notes and telling the model to read them before
+  doing any work. The summary alone is passive text the model can skim
+  past; the woken observation is what makes the read-back actually happen.
 - `/notes`: a picker over the current session's notes. Enter opens a file
   in `$EDITOR`, Ctrl+D deletes.
 

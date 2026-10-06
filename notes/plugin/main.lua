@@ -333,6 +333,16 @@ maki.api.create_autocmd({ "ToolDone", "CompactionDone", "SessionEnd" }, {
       outstanding[sid] = nil
       if ev.event == "CompactionDone" then
         marker_clear(sid)
+        -- The summary is passive text the model can skim past, so deliver the
+        -- read-back instruction as a woken observation: the next turn starts
+        -- by reading notes, not by redoing work. Naming the files here means
+        -- this does not depend on the summary carrying them.
+        local dir = notes_dir(sid)
+        local paths = dir and list_files(dir, nil)
+        local text = helpers.post_compact_text(paths)
+        if text then
+          maki.session.notify(text, { session = sid, wake = true, display = true })
+        end
       end
       return
     end

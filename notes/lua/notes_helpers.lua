@@ -317,4 +317,29 @@ function M.compact_hint(paths)
     .. ". Include in your summary the note filenames and an instruction to run `notes list` and read the relevant notes before redoing any work (the summary alone can miss filenames). Do not copy note contents into the summary."
 end
 
+-- Delivered as a woken observation right after CompactionDone, so the first
+-- post-compaction turn starts by reading notes instead of redoing work. The
+-- summary is passive text the model can skim; this is a fresh message that
+-- names the files itself, so it does not depend on the summary carrying them.
+function M.post_compact_text(paths)
+  if not paths or #paths == 0 then
+    return nil
+  end
+  local shown = math.min(#paths, M.HINT_LIST_CAP)
+  local names = {}
+  for i = 1, shown do
+    names[i] = paths[i]
+  end
+  local suffix = ""
+  if shown < #paths then
+    suffix = ", and " .. (#paths - shown) .. " more"
+  end
+  return "Compaction just replaced this session's history with a summary, which can miss details. "
+    .. "Notes that survived it: "
+    .. table.concat(names, ", ")
+    .. suffix
+    .. ". Read the relevant ones with the `notes` tool before doing any work "
+    .. "(e.g. `notes read <path>`; `notes list` shows them all), then continue the task."
+end
+
 return M

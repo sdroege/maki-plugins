@@ -302,6 +302,26 @@ check("legacy marker stays quiet", #notifications, 10)
 tooldone("S4", 20, 100)
 check_nil("legacy marker cleared below all steps", disk.files[marker("S4")])
 
+-- CompactionDone with notes wakes the model to read them before working.
+-- S1 still holds a.md from the marker test above; S2 carries only the
+-- hidden marker, so it must stay quiet.
+local noted = #notifications
+fire("CompactionDone", { session_id = "S1" })
+check("compaction notifies with notes", #notifications, noted + 1)
+check("compaction notify wakes", notifications[#notifications].opts.wake, true)
+check("compaction notify displays", notifications[#notifications].opts.display, true)
+check("compaction notify targets session", notifications[#notifications].opts.session, "S1")
+check("compaction notify names the note", notifications[#notifications].text:find("a.md", 1, true) ~= nil, true)
+check(
+  "compaction notify says read first",
+  notifications[#notifications].text:find("before doing any work", 1, true) ~= nil,
+  true
+)
+
+-- No notes, no nudge: S2 carries only the hidden marker.
+fire("CompactionDone", { session_id = "S2" })
+check("compaction quiet without notes", #notifications, noted + 1)
+
 if failures > 0 then
   print(("\n%d test(s) failed"):format(failures))
   os.exit(1)

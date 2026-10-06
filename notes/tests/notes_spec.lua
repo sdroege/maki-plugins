@@ -206,6 +206,22 @@ for i = 1, h.HINT_LIST_CAP + 7 do
 end
 check("hint caps file list", h.compact_hint(many):match("n50%.md, and 7 more%."), "n50.md, and 7 more.")
 
+-- post_compact_text
+check_nil("post-compact no files", h.post_compact_text({}))
+check_nil("post-compact nil files", h.post_compact_text(nil))
+check(
+  "post-compact names files",
+  h.post_compact_text({ "a.md", "b.md" }),
+  "Compaction just replaced this session's history with a summary, which can miss details. "
+    .. "Notes that survived it: a.md, b.md. Read the relevant ones with the `notes` tool before doing any work "
+    .. "(e.g. `notes read <path>`; `notes list` shows them all), then continue the task."
+)
+local many2 = {}
+for i = 1, h.HINT_LIST_CAP + 3 do
+  many2[i] = "n" .. i .. ".md"
+end
+check("post-compact caps file list", h.post_compact_text(many2):match("n50%.md, and 3 more"), "n50.md, and 3 more")
+
 if failures > 0 then
   print(("\n%d test(s) failed"):format(failures))
   os.exit(1)
