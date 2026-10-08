@@ -25,6 +25,8 @@ M.TEXT_REQUIRED_ERR = "text is required"
 M.QUERY_REQUIRED_ERR = "query is required"
 M.TOO_BIG_FMT = "note would exceed the %d byte per-file cap; start another note file"
 M.CAP_READ_HINT = "narrow the range with start_line/stop_line, or read a smaller note"
+M.CAP_READ_FMT = "... (output truncated at %d bytes; " .. M.CAP_READ_HINT .. ")"
+M.CAP_READ_TOTAL_FMT = "... (output truncated at %d bytes; %d lines total; " .. M.CAP_READ_HINT .. ")"
 M.SCAN_CAPPED_FMT = "... (searched the first %d of %d files; narrow with a prefix)"
 
 local config = { remind_steps = M.DEFAULT_REMIND_STEPS, reminder_text = nil }
@@ -165,12 +167,13 @@ function M.read_slice(content, start_line, stop_line, path)
   end
   local body = table.concat(picked, "\n")
   if not explicit then
-    return M.cap_read_output(body)
+    return M.cap_read_output(body, total)
   end
+  -- The range header already carries the total, so the cap marker stays as is.
   return M.cap_read_output(path .. " (lines " .. first .. "-" .. last .. " of " .. total .. "):\n" .. body)
 end
 
-function M.cap_read_output(s)
+function M.cap_read_output(s, total_lines)
   if #s <= M.MAX_READ_BYTES then
     return s
   end
@@ -183,7 +186,12 @@ function M.cap_read_output(s)
     end
     cut = cut - 1
   end
-  return s:sub(1, cut) .. "\n... (output truncated at " .. M.MAX_READ_BYTES .. " bytes; " .. M.CAP_READ_HINT .. ")"
+  -- The total line count tells the model how much is left to request with
+  -- start_line/stop_line.
+  if total_lines then
+    return s:sub(1, cut) .. "\n" .. (M.CAP_READ_TOTAL_FMT):format(M.MAX_READ_BYTES, total_lines)
+  end
+  return s:sub(1, cut) .. "\n" .. (M.CAP_READ_FMT):format(M.MAX_READ_BYTES)
 end
 
 function M.prepare_query(query)

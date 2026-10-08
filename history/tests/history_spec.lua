@@ -283,6 +283,19 @@ check(
 check("format_windows empty", h.format_windows({}), "")
 check("format_windows nil", h.format_windows(nil), "")
 
+-- truncation_note
+check("truncation note passes through untruncated", h.truncation_note("a\nb", "a\nb"), "a\nb")
+check(
+  "truncation note reports total lines",
+  h.truncation_note("a\nb\nc\nd", "a\nb\n\n[truncated 4 bytes]"),
+  "a\nb\n\n[truncated 4 bytes]\n" .. (h.TRUNCATION_TOTAL_FMT):format(4)
+)
+check(
+  "truncation note counts a trailing newline as a line",
+  h.truncation_note("a\n", "a\n\n[truncated 0 bytes]"),
+  "a\n\n[truncated 0 bytes]\n" .. (h.TRUNCATION_TOTAL_FMT):format(2)
+)
+
 if failures > 0 then
   print(("\n%d test(s) failed"):format(failures))
   os.exit(1)

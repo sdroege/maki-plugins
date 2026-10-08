@@ -23,6 +23,7 @@ M.WINDOW_ITEM_REQUIRED_ERR = "window and item are required"
 M.NO_MATCHES_MSG = "no matches"
 M.WINDOW_NOT_FOUND_FMT = "window not found: %s"
 M.ITEM_NOT_FOUND_FMT = "item not found: %s/%s"
+M.TRUNCATION_TOTAL_FMT = "[%d lines total in the full output]"
 
 local function safe_cut_end(s, cut)
   while cut > 0 do
@@ -290,6 +291,21 @@ function M.format_search(windows, opts)
     return M.NO_MATCHES_MSG
   end
   return table.concat(lines, "\n")
+end
+
+-- maki.truncate's marker reports the dropped bytes but not how much output
+-- exists, so when it cut the text append the total line count: the model can
+-- then narrow the next call (role/sub filters, a higher limit) instead of
+-- guessing whether more exists.
+function M.truncation_note(original, truncated)
+  if truncated == original then
+    return truncated
+  end
+  local total = 1
+  for _ in original:gmatch("\n") do
+    total = total + 1
+  end
+  return truncated .. "\n" .. (M.TRUNCATION_TOTAL_FMT):format(total)
 end
 
 return M

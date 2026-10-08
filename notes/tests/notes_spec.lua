@@ -56,6 +56,20 @@ check("slice stop past eof clamps", h.read_slice("a\nb\nc", 1, 10, "n.md"), "n.m
 check("slice empty file", h.read_slice("", nil, nil, "n.md"), "")
 check("slice single line file", h.read_slice("only", nil, nil, "n.md"), "only")
 
+local big_note_lines = {}
+for i = 1, 300 do
+  big_note_lines[i] = ("line %03d "):format(i) .. ("x"):rep(100)
+end
+local big_note = table.concat(big_note_lines, "\n")
+check(
+  "whole-file cap reports the note's line count",
+  h.read_slice(big_note, nil, nil, "n.md"):find("300 lines total", 1, true) ~= nil,
+  true
+)
+local ranged = h.read_slice(big_note, 1, 300, "n.md")
+check("range cap header carries the total", ranged:find("^n.md %(lines 1%-300 of 300%):", 1) ~= nil, true)
+check_nil("range cap does not repeat the total", ranged:find("lines total", 1, true))
+
 -- cap_read_output
 local big = ("x"):rep(h.MAX_READ_BYTES + 100)
 check("cap leaves small output", h.cap_read_output("small"), "small")
@@ -67,6 +81,11 @@ check(
 local split_safe = "a" .. ("é"):rep(h.MAX_READ_BYTES / 2 + 1)
 local capped = h.cap_read_output(split_safe)
 check("cap never splits a codepoint", capped:sub(h.MAX_READ_BYTES - 2, h.MAX_READ_BYTES - 1), "é")
+check(
+  "cap reports total lines",
+  h.cap_read_output(big, 532):sub(h.MAX_READ_BYTES + 1),
+  "\n" .. (h.CAP_READ_TOTAL_FMT):format(h.MAX_READ_BYTES, 532)
+)
 
 -- prepare_query
 check("query passes through", h.prepare_query("find me"), "find me")

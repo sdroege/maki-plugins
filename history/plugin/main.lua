@@ -182,7 +182,7 @@ Windows are `"current"` plus archive ids from `list_windows`; archives are immut
       return { llm_output = "error: " .. err, is_error = true }
     end
     local max_lines, max_bytes = output_limits.resolve({}, ctx)
-    local truncated = truncate(result, max_lines, max_bytes)
+    local truncated = helpers.truncation_note(result, truncate(result, max_lines, max_bytes))
     return { llm_output = truncated, body = render_content(truncated, ctx) }
   end,
 })
