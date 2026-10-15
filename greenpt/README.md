@@ -8,7 +8,10 @@ API no longer lists.
 ## What it adds
 
 - The `greenpt` provider: its models become `greenpt/<model_id>` in `/model`
-  and the picker.
+  and the picker. GreenPT is in the models.dev catalog, so the plugin takes
+  over the `greenpt` name (listed as `providers = ["greenpt"]` in
+  `plugin.toml`, shown in the install approval prompt) and receives the key
+  saved for it.
 - Curated rows for glm-5.3, glm-5.3-flash, kimi-k3, deepseek-v4.1-flash and
   minimax-m2.5, with prices (GreenPT's list in EUR per 1M tokens, stored in
   maki's dollar fields as-is), context windows, and vision and thinking
