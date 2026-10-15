@@ -44,8 +44,9 @@ Or copy this directory into your config dir (e.g.
 
 ## Permissions
 
-None: it reads the transcript through `maki.session.messages`, which is not
-gated.
+`agent`: the `CompactionDone` listener wakes the session with a `notify`
+observation, and starting a turn requires the `agent` permission. Reading
+the transcript through `maki.session.transcript` is not gated.
 
 ## Tests
 

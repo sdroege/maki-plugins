@@ -58,7 +58,8 @@ the middle ones to update, the last to save before compaction.
 ## Permissions
 
 `fs_read` and `fs_write`, used only for the session's own notes dir and
-the `/notes` picker.
+the `/notes` picker. `agent`, so the reminders and the post-compaction
+read-back can wake the session with a `notify` observation.
 
 ## Tests
 
