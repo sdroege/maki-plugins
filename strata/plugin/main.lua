@@ -59,6 +59,12 @@ maki.provider.register({
   codec = "openai",
   base_url = "http://127.0.0.1:8080/v1",
   family = "generic",
+  -- No output cap is declared, so no max_tokens is sent: Strata fills
+  -- whatever room the context has left, and a client-sent cap only adds
+  -- a refusal path - the server rejects prompt + max_tokens over the
+  -- context unless --fit-max-tokens is on, and maki's prompt estimate
+  -- can read lower than the server's own count.
+  max_output_tokens = false,
   models = MODELS,
 
   -- Context window and vision come from the API, not the row: the server

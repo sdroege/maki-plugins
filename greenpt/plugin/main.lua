@@ -93,6 +93,10 @@ maki.provider.register({
   display_name = "GreenPT",
   codec = "openai",
   base_url = "https://api.greenpt.ai/v1",
+  -- No provider-wide output cap: a row that states none sends no
+  -- max_tokens and the API's own limit applies. minimax-m2.5 keeps the
+  -- 65536 its model card declares.
+  max_output_tokens = false,
   models = MODELS,
 
   auth = function()

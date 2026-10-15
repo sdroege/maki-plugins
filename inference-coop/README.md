@@ -26,7 +26,7 @@ renewable energy (GreenPT) or publicly developed sovereign models
 
 ## Install
 
-Requires maki 0.5.7 or newer.
+Requires maki 0.6.0 or newer.
 
 ```lua
 maki.pack.add({ "https://github.com/<owner>/maki-inference-coop" })

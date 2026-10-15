@@ -24,7 +24,7 @@ runs on your own machine, so it needs no API key and pricing is free.
 
 ## Install
 
-Requires maki 0.5.7 or newer.
+Requires maki 0.6.0 or newer.
 
 ```lua
 maki.pack.add({ "https://github.com/<owner>/maki-strata" })

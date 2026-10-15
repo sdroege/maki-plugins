@@ -127,6 +127,9 @@ maki.provider.register({
   codec = "openai",
   base_url = "https://gateway.inference.coop/v1",
   api_key_env = API_KEY_ENV,
+  -- No output cap is declared, so no max_tokens is sent: the gateway's
+  -- upstreams enforce their own limits, and no row states one.
+  max_output_tokens = false,
   models = MODELS,
 
   -- /models also lists the speech models (whisper, voxtral-tts). Anything
