@@ -12,15 +12,15 @@ API no longer lists.
   over the `greenpt` name (listed as `providers = ["greenpt"]` in
   `plugin.toml`, shown in the install approval prompt) and receives the key
   saved for it.
-- Curated rows for glm-5.3, glm-5.3-flash, kimi-k3, deepseek-v4.1-flash and
-  minimax-m2.5, with prices (GreenPT's list in EUR per 1M tokens, stored in
-  maki's dollar fields as-is), context windows, and vision and thinking
-  support.
+- Curated rows for glm-5.3, glm-5.3-flash, kimi-k3, deepseek-v4.1-flash,
+  deepseek-v4.1-flash-1017 and minimax-m3, with prices (GreenPT's list in
+  EUR per 1M tokens, stored in maki's dollar fields as-is), context
+  windows, and vision and thinking support.
 - GreenPT bills no cache write, so `cache_write` is 0.0. It enables reasoning
   by default, so every row spells its own `thinking_fields` ladder: off sends
   `reasoning_effort = "none"`, each named level sends itself, and a mode the
   row leaves out sends no field at all, leaving GreenPT's own default in
-  charge. minimax-m2.5 reasons whether asked or not and accepts no `"none"`,
+  charge. minimax-m3 reasons whether asked or not and accepts no `"none"`,
   so off clamps to minimal, the lowest rung of its ladder.
 
 ## Keeping the table current

@@ -2,13 +2,13 @@
 
 A maki plugin that adds the [Inference Cooperative](https://inference.coop)
 as a provider: a member-governed gateway in front of several providers
-(Tinfoil, GreenPT, PublicAI) behind one OpenAI-compatible endpoint.
+(Tinfoil, GreenPT, Regolo) behind one OpenAI-compatible endpoint.
 
 Model ids are `<provider>/<model>`, so a maki spec reads
 `inference-coop/greenpt/glm-5.3`. The same model behind two providers stays
 two ids, which is the co-op's point: you pick privacy (Tinfoil enclaves),
 renewable energy (GreenPT) or publicly developed sovereign models
-(PublicAI).
+(Regolo).
 
 ## What it adds
 
@@ -78,7 +78,7 @@ co-op's pages are a mirror that can lag or have gaps. The concrete case is
 cached input on greenpt/glm-5.3: the config lists no cached rate and models.md
 shows a dash, but GreenPT bills 0.275, so the row records that. Check the
 upstream provider's own pricing before recording 0.0. The tinfoil and
-publicai rows have no such upstream list to fall back on, so for those the
+regolo rows have no such upstream list to fall back on, so for those the
 co-op's sources are the last word.
 
 Reasoning values come from the upstream provider's docs, not the co-op's:

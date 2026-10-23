@@ -26,10 +26,9 @@ local API_KEY_ENV = "INFERENCE_COOP_API_KEY"
 -- pays GreenPT's list price directly and its pages are only a mirror that
 -- can lag or have gaps. glm-5.3's 0.275 cache read is the case in point.
 -- The gateway forwards to OpenAI-compatible endpoints that reason by
--- default, and no
--- built-in effort dialect matches that shape (off must send "none" while
--- "standard" omits the field on off), so no dialect is declared and each
--- row spells its own ladder: a level the row names is sent as a
+-- default, and no built-in effort dialect matches that shape (off must send
+-- "none" while "standard" omits the field on off), so no dialect is declared
+-- and each row spells its own ladder: a level the row names is sent as a
 -- reasoning_effort of the same name, "off" sends "none", and a mode the row
 -- leaves out sends no field at all, leaving the model's default in charge.
 -- Models that reason whether asked or not declare requires_thinking, so off
@@ -44,23 +43,13 @@ end
 
 local MODELS = {
   {
-    prefixes = { "greenpt/glm-5.3" },
-    tier = "strong",
-    context_window = 1000000,
-    supports_thinking = true,
-    -- The co-op's LiteLLM config lists no cached rate for this id (and
-    -- models.md shows a dash), but GreenPT bills cached input at 0.275, so
-    -- record that rather than track a rate the gateway config forgot.
-    pricing = { input = 1.10, output = 4.40, cache_write = 0.0, cache_read = 0.275 },
-    thinking_fields = efforts("off", "minimal", "low", "medium", "high"),
-  },
-  {
-    prefixes = { "tinfoil/glm-5-3-flash" },
+    -- The co-op's default model.
+    prefixes = { "greenpt/deepseek-v4.1-flash" },
     tier = "medium",
     context_window = 1000000,
     supports_thinking = true,
     supports_vision = true,
-    pricing = { input = 0.40, output = 1.25, cache_write = 0.0, cache_read = 0.10 },
+    pricing = { input = 0.22, output = 1.10, cache_write = 0.0, cache_read = 0.011 },
     thinking_fields = efforts("off", "minimal", "low", "medium", "high"),
   },
   {
@@ -73,13 +62,25 @@ local MODELS = {
     thinking_fields = efforts("off", "minimal", "low", "medium", "high"),
   },
   {
-    -- The co-op's default model.
-    prefixes = { "greenpt/deepseek-v4.1-flash" },
-    tier = "medium",
+    prefixes = { "greenpt/glm-5.3" },
+    tier = "strong",
     context_window = 1000000,
     supports_thinking = true,
-    supports_vision = true,
-    pricing = { input = 0.22, output = 1.10, cache_write = 0.0, cache_read = 0.011 },
+    -- The co-op's LiteLLM config lists no cached rate for this id (and
+    -- models.md shows a dash), but GreenPT bills cached input at 0.275, so
+    -- record that rather than track a rate the gateway config forgot.
+    pricing = { input = 1.10, output = 4.40, cache_write = 0.0, cache_read = 0.275 },
+    thinking_fields = efforts("off", "minimal", "low", "medium", "high"),
+  },
+  {
+    -- Text-only: models.md shows no vision and the LiteLLM config spells
+    -- "Text-only (no vision)". Replaced tinfoil/glm-5-3-flash, which
+    -- Tinfoil deprecated 2026-10-09.
+    prefixes = { "tinfoil/glm-5.3" },
+    tier = "strong",
+    context_window = 1000000,
+    supports_thinking = true,
+    pricing = { input = 1.80, output = 5.75, cache_write = 0.0, cache_read = 0.45 },
     thinking_fields = efforts("off", "minimal", "low", "medium", "high"),
   },
   {
@@ -91,11 +92,23 @@ local MODELS = {
     thinking_fields = efforts("off", "minimal", "low", "medium", "high"),
   },
   {
-    prefixes = { "publicai/apertus-v1.5-70b" },
+    -- Replaced PublicAI (removed 2026-10-16; billing never operational) as
+    -- the co-op's Apertus provider: same open weights, EU ZDR + renewables.
+    prefixes = { "regolo/apertus-70b" },
+    tier = "medium",
+    context_window = 65536,
+    supports_vision = true,
+    pricing = { input = 0.46, output = 2.44, cache_write = 0.0, cache_read = 0.0 },
+  },
+  {
+    -- The gateway forces chat_template_kwargs: {enable_thinking: false} for
+    -- this id (LiteLLM config); without it the reasoning phase eats the
+    -- whole token budget and the content comes back empty.
+    prefixes = { "regolo/qwen3.5-122b" },
     tier = "medium",
     context_window = 262144,
     supports_vision = true,
-    pricing = { input = 0.82, output = 2.92, cache_write = 0.0, cache_read = 0.0 },
+    pricing = { input = 1.16, output = 4.87, cache_write = 0.0, cache_read = 0.0 },
   },
   {
     -- Reasons whether asked or not and accepts no "none", so off clamps to
@@ -106,13 +119,6 @@ local MODELS = {
     requires_thinking = true,
     pricing = { input = 0.15, output = 0.60, cache_write = 0.0, cache_read = 0.0 },
     thinking_fields = efforts("low", "medium", "high"),
-  },
-  {
-    prefixes = { "publicai/apertus-v1.5-8b" },
-    tier = "weak",
-    context_window = 262144,
-    supports_vision = true,
-    pricing = { input = 0.10, output = 0.20, cache_write = 0.0, cache_read = 0.0 },
   },
 }
 

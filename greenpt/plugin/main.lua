@@ -62,6 +62,15 @@ local MODELS = {
     thinking_fields = efforts("off", "minimal", "low", "medium", "high"),
   },
   {
+    prefixes = { "deepseek-v4.1-flash-1017" },
+    tier = "medium",
+    context_window = 1000000,
+    supports_thinking = true,
+    supports_vision = true,
+    pricing = { input = 0.36, output = 1.45, cache_write = 0.0, cache_read = 0.04 },
+    thinking_fields = efforts("off", "minimal", "low", "medium", "high"),
+  },
+  {
     prefixes = { "glm-5.3-flash" },
     tier = "medium",
     context_window = 1000000,
@@ -72,13 +81,13 @@ local MODELS = {
   {
     -- Reasons whether asked or not and accepts no "none", so off clamps to
     -- minimal, the lowest rung of its ladder.
-    prefixes = { "minimax-m2.5" },
+    prefixes = { "minimax-m3" },
     tier = "medium",
-    context_window = 196608,
+    context_window = 1000000,
     max_output_tokens = 65536,
     supports_thinking = true,
     requires_thinking = true,
-    pricing = { input = 0.33, output = 1.32, cache_write = 0.0, cache_read = 0.0825 },
+    pricing = { input = 0.44, output = 2.20, cache_write = 0.0, cache_read = 0.11 },
     thinking_fields = efforts("minimal", "low", "medium", "high"),
   },
 }
@@ -94,7 +103,7 @@ maki.provider.register({
   codec = "openai",
   base_url = "https://api.greenpt.ai/v1",
   -- No provider-wide output cap: a row that states none sends no
-  -- max_tokens and the API's own limit applies. minimax-m2.5 keeps the
+  -- max_tokens and the API's own limit applies. minimax-m3 keeps the
   -- 65536 its model card declares.
   max_output_tokens = false,
   models = MODELS,
