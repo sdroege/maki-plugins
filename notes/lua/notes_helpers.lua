@@ -86,6 +86,16 @@ function M.reminder_text(context_size, context_window, step)
   )
 end
 
+-- A subagent has no notes dir and no turn after its run, so its nudge sends
+-- the findings back instead of saving them: the configured reminder_text is
+-- deliberately not honored here, it speaks of notes a subagent cannot keep.
+function M.task_reminder_text(context_size, context_window)
+  local pct = math.floor(context_size / context_window * 100 + 0.5)
+  return ("context is nearly full (%d%% of the window): wrap up and return your findings so far as your answer, before a compaction drops your working state"):format(
+    pct
+  )
+end
+
 function M.safe_path(path)
   if type(path) ~= "string" or path == "" then
     return nil, M.PATH_REQUIRED_ERR

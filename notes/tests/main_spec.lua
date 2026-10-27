@@ -25,6 +25,7 @@ end
 local disk = { files = {}, dirs = {} }
 local STATE = { dir = "/state" }
 local notifications = {}
+local sent = {}
 
 local function fs()
   local self = {}
@@ -122,6 +123,12 @@ local maki = {
       return "S1"
     end,
   },
+  task = {
+    send = function(id, text)
+      sent[#sent + 1] = { id = id, text = text }
+      return true
+    end,
+  },
   ui = {
     flash = function() end,
     buf = function()
@@ -168,12 +175,12 @@ local function fire(event, data)
   end
 end
 
-local function tooldone(sid, size, window, subagent)
+local function tooldone(sid, size, window, task_id)
   fire("ToolDone", {
     session_id = sid,
     context_size = size,
     context_window = window,
-    subagent = subagent,
+    task_id = task_id,
   })
 end
 
@@ -224,9 +231,32 @@ check("marker holds top step", disk.files[marker("S1")], "0.8")
 tooldone("S1", 92, 100)
 check("quiet while outstanding", #notifications, 3)
 
--- A subagent's ToolDone says nothing about this session.
-tooldone("S1", 95, 100, true)
-check("subagent ignored", #notifications, 3)
+-- A subagent's ToolDone says nothing about this session's context: it nudges
+-- its own run, only at the top step, with hysteresis the parent never sees
+-- and a marker the parent never gets.
+tooldone("S9", 55, 100, "T1")
+check("task quiet below top step", #sent, 0)
+tooldone("S9", 85, 100, "T1")
+check("task nudged at top step", #sent, 1)
+check("nudge addresses the task", sent[1].id, "T1")
+check("nudge says wrap up", sent[1].text:find("wrap up", 1, true) ~= nil, true)
+check("nudge names the fill", sent[1].text:find("85% of the window", 1, true) ~= nil, true)
+tooldone("S9", 95, 100, "T1")
+check("task hysteresis holds", #sent, 1)
+tooldone("S9", 88, 100, "T2")
+check("each task its own state", #sent, 2)
+check("second task addressed", sent[2].id, "T2")
+tooldone("S9", 40, 100, "T1")
+tooldone("S9", 82, 100, "T1")
+check("task re-arms below top", #sent, 3)
+check("re-armed nudge for T1", sent[3].id, "T1")
+check("parent notifications untouched", #notifications, 3)
+check_nil("task leaves no marker", disk.files[marker("S9")])
+-- An old host names no task, only a subagent flag: an unaddressable run stays quiet.
+fire("ToolDone", { session_id = "S9", context_size = 99, context_window = 100, subagent = true })
+check("unnamed subagent stays quiet", #sent, 3)
+check("unnamed subagent leaves no marker", disk.files[marker("S9")] == nil, true)
+check("unnamed subagent no parent nudge", #notifications, 3)
 
 -- Falling below the top re-arms it but not the lower steps; the marker
 -- shrinks with the state so a restart cannot resurrect a stale step.

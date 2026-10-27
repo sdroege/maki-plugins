@@ -291,6 +291,10 @@ maki.api.register_prompt_hint({
 
 local outstanding = {}
 
+-- A subagent run's hysteresis, per session and task id. Never marked on
+-- disk: the run cannot outlive the session, and the notes dir is not its own.
+local outstanding_task = {}
+
 -- The reminder's hysteresis state does not survive a restart on its own, so
 -- every fired nudge also plants a marker file holding the nudged step: a
 -- restart otherwise re-arms the steps and the session gets nudged twice. The
@@ -323,6 +327,23 @@ local function marker_clear(sid)
   end
 end
 
+-- Only the top step earns a subagent a nudge: asking a research task to wrap
+-- up at 40% would only annoy it. The nudge reaches the run itself through
+-- maki.task.send, which it reads at its next turn boundary.
+local function remind_task(sid, task_id, context_size, context_window)
+  local tasks = outstanding_task[sid]
+  if not tasks then
+    tasks = {}
+    outstanding_task[sid] = tasks
+  end
+  local steps = helpers.remind_steps()
+  local step, state = helpers.should_remind(tasks[task_id], context_size, context_window, { steps[#steps] })
+  tasks[task_id] = state
+  if step then
+    maki.task.send(task_id, helpers.task_reminder_text(context_size, context_window))
+  end
+end
+
 maki.api.create_autocmd({ "ToolDone", "CompactionDone", "SessionEnd" }, {
   callback = function(ev)
     local sid = ev.data and ev.data.session_id
@@ -331,6 +352,9 @@ maki.api.create_autocmd({ "ToolDone", "CompactionDone", "SessionEnd" }, {
     end
     if ev.event ~= "ToolDone" then
       outstanding[sid] = nil
+      if ev.event == "SessionEnd" then
+        outstanding_task[sid] = nil
+      end
       if ev.event == "CompactionDone" then
         marker_clear(sid)
         -- The summary is passive text the model can skim past, so deliver the
@@ -347,7 +371,13 @@ maki.api.create_autocmd({ "ToolDone", "CompactionDone", "SessionEnd" }, {
       return
     end
     -- A subagent's ToolDone carries the subagent's own context usage, which
-    -- says nothing about this session's.
+    -- says nothing about this session's. A named task gets its own nudge;
+    -- an older host only flagged subagents, and a run nobody can address
+    -- stays quiet.
+    if ev.data.task_id then
+      remind_task(sid, ev.data.task_id, ev.data.context_size, ev.data.context_window)
+      return
+    end
     if ev.data.subagent then
       return
     end
