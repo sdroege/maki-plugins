@@ -204,7 +204,7 @@ check("first step notifies", #notifications, 1)
 check("first step text", notifications[1].text:find("42% full", 1, true) ~= nil, true)
 check("notify targets session", notifications[1].opts.session, "S1")
 check("notify wakes", notifications[1].opts.wake, true)
-check("notify displays", notifications[1].opts.display, true)
+check("notify displays", notifications[1].opts.display, notifications[1].text)
 check("marker holds first step", disk.files[marker("S1")], "0.4")
 
 tooldone("S1", 40, 100)
@@ -309,7 +309,7 @@ local noted = #notifications
 fire("CompactionDone", { session_id = "S1" })
 check("compaction notifies with notes", #notifications, noted + 1)
 check("compaction notify wakes", notifications[#notifications].opts.wake, true)
-check("compaction notify displays", notifications[#notifications].opts.display, true)
+check("compaction notify displays", notifications[#notifications].opts.display, notifications[#notifications].text)
 check("compaction notify targets session", notifications[#notifications].opts.session, "S1")
 check("compaction notify names the note", notifications[#notifications].text:find("a.md", 1, true) ~= nil, true)
 check(

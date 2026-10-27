@@ -60,6 +60,9 @@ the middle ones to update, the last to save before compaction.
 `fs_read` and `fs_write`, used only for the session's own notes dir and
 the `/notes` picker. `agent`, so the reminders and the post-compaction
 read-back can wake the session with a `notify` observation.
+`session_write`, for the `notify` observations themselves.
+`session_read`, so the `ToolDone` subscription arrives whole instead of
+stripped to its metadata.
 
 ## Tests
 

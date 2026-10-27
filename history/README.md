@@ -45,8 +45,9 @@ Or copy this directory into your config dir (e.g.
 ## Permissions
 
 `agent`: the `CompactionDone` listener wakes the session with a `notify`
-observation, and starting a turn requires the `agent` permission. Reading
-the transcript through `maki.session.transcript` is not gated.
+observation, and starting a turn requires the `agent` permission.
+`session_read`: reading the transcript through `maki.session.transcript`.
+`session_write`: the `notify` observations themselves.
 
 ## Tests
 

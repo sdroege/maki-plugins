@@ -2,3 +2,5 @@ min_maki_version = "0.6.0"
 
 [permissions]
 agent = true
+session_read = true
+session_write = true

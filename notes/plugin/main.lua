@@ -341,7 +341,7 @@ maki.api.create_autocmd({ "ToolDone", "CompactionDone", "SessionEnd" }, {
         local paths = dir and list_files(dir, nil)
         local text = helpers.post_compact_text(paths)
         if text then
-          maki.session.notify(text, { session = sid, wake = true, display = true })
+          maki.session.notify(text, { session = sid, wake = true, display = text })
         end
       end
       return
@@ -369,10 +369,8 @@ maki.api.create_autocmd({ "ToolDone", "CompactionDone", "SessionEnd" }, {
       marker_clear(sid)
     end
     if step then
-      maki.session.notify(
-        helpers.reminder_text(ev.data.context_size, ev.data.context_window, step),
-        { session = sid, wake = true, display = true }
-      )
+      local text = helpers.reminder_text(ev.data.context_size, ev.data.context_window, step)
+      maki.session.notify(text, { session = sid, wake = true, display = text })
     end
   end,
 })

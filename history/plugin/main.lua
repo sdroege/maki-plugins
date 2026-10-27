@@ -206,9 +206,8 @@ maki.api.create_autocmd({ "CompactionDone" }, {
     if not sid then
       return
     end
-    maki.session.notify(
-      "a compaction dropped the older turns from the context; use the history tool to search or read them back instead of redoing work",
-      { session = sid, wake = true, display = true }
-    )
+    local text =
+      "a compaction dropped the older turns from the context; use the history tool to search or read them back instead of redoing work"
+    maki.session.notify(text, { session = sid, wake = true, display = text })
   end,
 })
