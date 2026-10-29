@@ -21,10 +21,13 @@ local API_KEY_ENV = "INFERENCE_COOP_API_KEY"
 -- what a member pays: members get a monthly allowance. Recorded anyway, so
 -- maki's cost sums track co-op spend. No provider bills a cache write, so
 -- cache_write is 0.0, and an unlisted cache read is 0.0 too - except that a
--- greenpt/* row where the co-op's sources disagree with GreenPT's own price
--- list (https://docs.greenpt.ai/model-cards) follows GreenPT, since the co-op
--- pays GreenPT's list price directly and its pages are only a mirror that
--- can lag or have gaps. glm-5.3's 0.275 cache read is the case in point.
+-- greenpt/* or regolo/* row where the co-op's sources disagree with the
+-- provider's own price list (https://docs.greenpt.ai/model-cards,
+-- https://regolo.ai/models) follows the provider, storing its EUR list
+-- per 1M as-is, since the co-op pays the provider's list price directly and
+-- its pages are only a mirror that can lag or have gaps. The regolo rows
+-- are the case in point: the co-op's sources carry Regolo's list converted
+-- to dollars at 1.16.
 -- The gateway forwards to OpenAI-compatible endpoints that reason by
 -- default, and no built-in effort dialect matches that shape (off must send
 -- "none" while "standard" omits the field on off), so no dialect is declared
@@ -66,9 +69,6 @@ local MODELS = {
     tier = "strong",
     context_window = 1000000,
     supports_thinking = true,
-    -- The co-op's LiteLLM config lists no cached rate for this id (and
-    -- models.md shows a dash), but GreenPT bills cached input at 0.275, so
-    -- record that rather than track a rate the gateway config forgot.
     pricing = { input = 1.10, output = 4.40, cache_write = 0.0, cache_read = 0.275 },
     thinking_fields = efforts("off", "minimal", "low", "medium", "high"),
   },
@@ -98,7 +98,7 @@ local MODELS = {
     tier = "medium",
     context_window = 65536,
     supports_vision = true,
-    pricing = { input = 0.46, output = 2.44, cache_write = 0.0, cache_read = 0.0 },
+    pricing = { input = 0.40, output = 2.10, cache_write = 0.0, cache_read = 0.0 },
   },
   {
     -- The gateway forces chat_template_kwargs: {enable_thinking: false} for
@@ -108,7 +108,7 @@ local MODELS = {
     tier = "medium",
     context_window = 262144,
     supports_vision = true,
-    pricing = { input = 1.16, output = 4.87, cache_write = 0.0, cache_read = 0.0 },
+    pricing = { input = 1.00, output = 4.20, cache_write = 0.0, cache_read = 0.0 },
   },
   {
     -- Reasons whether asked or not and accepts no "none", so off clamps to

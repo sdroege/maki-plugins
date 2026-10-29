@@ -6,8 +6,10 @@
 -- https://docs.greenpt.ai/models for what `GET /v1/models` answers. Keep the
 -- table in sync with the recommended catalogue when those pages change. A
 -- "New model" line in the Model changes list is only curatable once a model
--- card backs it: the metis entry of 30 September 2026 has no card, no
--- /v1/models listing and no changelog mention, and there is no such model.
+-- card backs it and /v1/models lists the id as a chat model: the metis entry
+-- of 30 September 2026 now has a card, but it is a decision model called
+-- through POST /v1/systemone rather than chat completions, and /v1/models
+-- does not list it, so it stays out.
 
 local parse = require("maki.provider_parse")
 
@@ -86,6 +88,7 @@ local MODELS = {
     context_window = 1000000,
     max_output_tokens = 65536,
     supports_thinking = true,
+    supports_vision = true,
     requires_thinking = true,
     pricing = { input = 0.44, output = 2.20, cache_write = 0.0, cache_read = 0.11 },
     thinking_fields = efforts("minimal", "low", "medium", "high"),

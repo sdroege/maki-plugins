@@ -40,9 +40,11 @@ GreenPT announces models or price changes:
 The "Model changes" list is the place to start: newest first, it tracks every
 release, price change and status change. A "New model" line there without a
 model card or a `/v1/models` listing has nothing to curate yet, so wait for
-the card. The `metis` entry of 30 September 2026 is exactly that: no model
-card, no `/v1/models` listing, no changelog mention - the model does not
-exist, so it stays out of the table. Status changes mean different things:
+the card - and a card alone is not enough when it is not a chat model: the
+`metis` entry of 30 September 2026 now has a card, but it is a decision model
+called through `POST /v1/systemone` rather than chat completions, and
+`/v1/models` does not list it either, so it stays out of the table. Status
+changes mean different things:
 
 - A deprecated id stops answering (`400 Unsupported model`) and drops out of
   `/v1/models`, so the picker loses it through `list_models` on its own - but

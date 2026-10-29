@@ -55,6 +55,8 @@ adds models or rates change:
   https://git.inference.coop/co-op/docs/src/branch/main/models.md
 - Authoritative pricing, including the cached-input rates:
   https://git.inference.coop/code/litellm/src/branch/main/config.yaml
+- Regolo's own catalogue and rates, for the pricing of regolo/* rows:
+  https://regolo.ai/models (announcements: https://regolo.ai/pricing-update/)
 - API usage and auth: https://git.inference.coop/co-op/docs/src/branch/main/api-access.md
 
 The docs state the two stay in sync: the LiteLLM config holds the numbers,
@@ -71,14 +73,26 @@ so read both before touching a row:
 A row needs both sources behind it: drop it when either drops the model.
 
 A dash for cached input is not always a rate that does not exist, and the
-same goes for any other price that disagrees: for a greenpt/* row, GreenPT's
-own price list (https://docs.greenpt.ai/model-cards) has priority over the
-co-op's sources, because the co-op pays GreenPT's list price directly - the
-co-op's pages are a mirror that can lag or have gaps. The concrete case is
-cached input on greenpt/glm-5.3: the config lists no cached rate and models.md
-shows a dash, but GreenPT bills 0.275, so the row records that. Check the
-upstream provider's own pricing before recording 0.0. The tinfoil and
-regolo rows have no such upstream list to fall back on, so for those the
+same goes for any other price that disagrees: for a greenpt/* or regolo/*
+row, the provider's own price list has priority over the co-op's sources,
+because the co-op pays the provider's list price directly - the co-op's
+pages are a mirror that can lag or have gaps. Check the upstream provider's
+own pricing before recording 0.0.
+
+GreenPT's list is https://docs.greenpt.ai/model-cards; the rule came from
+cached input on greenpt/glm-5.3, where the config listed no cached rate and
+models.md showed a dash while GreenPT billed 0.275 (both co-op sources list
+the rate now and agree with the row). Regolo's is the per-token catalogue
+embedded in https://regolo.ai/models, plus its rate announcements at
+https://regolo.ai/pricing-update/: the co-op's sources carry Regolo's EUR
+list converted to dollars at 1.16, and the rows record the list itself
+(apertus-70b 0.40/2.10, qwen3.5-122b 1.00/4.20). Regolo has announced new
+rates effective 2026-11-01 (apertus-70b EUR 1.00/3.40, qwen3.5-122b EUR
+0.60/3.40), so re-sync both rows once they are live.
+
+The upstream lists settle prices only: which models are rows still comes
+from the co-op's docs, since Regolo serves many models the co-op does not.
+The tinfoil rows have no upstream list to fall back on, so for those the
 co-op's sources are the last word.
 
 Reasoning values come from the upstream provider's docs, not the co-op's:
