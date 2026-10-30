@@ -2,5 +2,9 @@ min_maki_version = "0.5.0"
 
 [permissions]
 run = true
+# permission.prompt fires for every prompting tool, edit/write included, and
+# this plugin's layer is weighed on each of those calls. Without fs_write the
+# layer would be skipped with a warning on every edit/write prompt.
+fs_write = true
 session_read = true
 session_write = true
