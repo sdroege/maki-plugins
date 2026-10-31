@@ -1,44 +1,40 @@
 -- Strata, a local OpenAI-compatible server on 127.0.0.1:8080 serving one
--- quantised model. It needs no key and charges nothing, so there is no
+-- model at a time. It needs no key and charges nothing, so there is no
 -- `auth` hook or `api_key_env`, and pricing is a real zero.
 --
 -- What the API reports is read from it: `list_models` takes the context
 -- window from `meta.n_ctx` and vision support from
 -- `architecture.input_modalities`, the llama.cpp shape GET /v1/models
--- answers. The curated row keeps what the endpoint cannot say: the tier,
--- the zero pricing and the thinking ladder. Strata's server maps clients'
--- effort spellings onto its template's low/medium/xhigh plus
--- enable_thinking=false (serve/frontend.py's EFFORT), and thinks by default
--- at xhigh, so no dialect is declared and the row spells its own ladder:
--- off sends "none", each named level sends itself ("high", "xhigh" and
--- "max" all mean the template's xhigh), and a mode the row leaves out snaps
--- to the nearest declared rung - maki's "minimal" lands on "low", never on
--- the server's "minimal" alias, which means off.
+-- answers. Only the models the server lists are offered, so the picker
+-- follows whatever model is loaded and drops the image model.
+--
+-- Strata's server maps clients' effort spellings onto its template's
+-- low/medium/xhigh plus enable_thinking=false (serve/frontend.py's EFFORT),
+-- and thinks by default at xhigh. The standard dialect sends "none" for off,
+-- and the per-model effort list below snaps maki's "minimal" to "low", never
+-- to the server's "minimal" alias, which means off. The server maps the
+-- levels its family does not take (Qwen's high/xhigh/max all mean xhigh,
+-- DeepSeek's xhigh/max mean max).
 
 local parse = require("maki.provider_parse")
 
 local MODELS_PATH = "/models"
 
-local MODELS = {
-  {
-    prefixes = { "qwen3.8-flash-next-unsloth-ud-iq4_xs" },
-    tier = "medium",
-    supports_thinking = true,
-    pricing = { input = 0, output = 0, cache_write = 0, cache_read = 0 },
-    thinking_fields = {
-      off = { reasoning_effort = "none" },
-      low = { reasoning_effort = "low" },
-      medium = { reasoning_effort = "medium" },
-      high = { reasoning_effort = "high" },
-      xhigh = { reasoning_effort = "xhigh" },
-      max = { reasoning_effort = "max" },
-    },
-  },
-}
+local ZERO_PRICING = { input = 0, output = 0, cache_write = 0, cache_read = 0 }
 
-local KNOWN = {}
-for _, row in ipairs(MODELS) do
-  KNOWN[row.prefixes[1]] = true
+-- The levels the server accepts. "minimal" is left out on purpose: the
+-- server reads it as off, so maki's minimal snaps down to low.
+local EFFORT_SUPPORTED = { "low", "medium", "high", "xhigh", "max" }
+
+-- Qwen3.6-35B-A3B is the small member of the family; everything else Strata
+-- serves is the medium tier.
+local WEAK_PREFIX = "qwen3.6-35b-a3b"
+
+local function tier_for(id)
+  if id:sub(1, #WEAK_PREFIX) == WEAK_PREFIX then
+    return "weak"
+  end
+  return "medium"
 end
 
 local function has_modality(modalities, name)
@@ -65,27 +61,36 @@ maki.provider.register({
   -- context unless --fit-max-tokens is on, and maki's prompt estimate
   -- can read lower than the server's own count.
   max_output_tokens = false,
-  models = MODELS,
+  openai = {
+    thinking = { dialect = "standard", requires_support = true },
+  },
 
-  -- Context window and vision come from the API, not the row: the server
-  -- may start with another --max-context, or load a vision encoder. Only
-  -- ids the row names are listed, which also drops any alias the server
-  -- adds under its own id.
+  -- Only the models the server lists are offered. The image model is
+  -- dropped by its output modality, and an alias is dropped because the
+  -- model it points at is listed under its own id.
   list_models = function(ctx)
     local body, err = ctx.get_json(MODELS_PATH)
     if err then
       return nil, err
     end
     return parse.models(body, function(m)
-      if type(m) ~= "table" or type(m.id) ~= "string" or KNOWN[m.id] == nil then
+      if type(m) ~= "table" or type(m.id) ~= "string" or m.alias_of ~= nil then
         return nil
       end
       local meta = type(m.meta) == "table" and m.meta or {}
       local arch = type(m.architecture) == "table" and m.architecture or {}
+      local outputs = arch.output_modalities
+      if type(outputs) == "table" and not has_modality(outputs, "text") then
+        return nil
+      end
       return {
         id = m.id,
         context_window = parse.as_u32(meta.n_ctx),
         supports_vision = has_modality(arch.input_modalities, "image"),
+        supports_thinking = true,
+        pricing = ZERO_PRICING,
+        tier = tier_for(m.id),
+        effort = { supported = EFFORT_SUPPORTED, send_off = true },
       }
     end)
   end,
