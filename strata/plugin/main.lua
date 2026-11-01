@@ -55,11 +55,9 @@ maki.provider.register({
   codec = "openai",
   base_url = "http://127.0.0.1:8080/v1",
   family = "generic",
-  -- No output cap is declared, so no max_tokens is sent: Strata fills
-  -- whatever room the context has left, and a client-sent cap only adds
-  -- a refusal path - the server rejects prompt + max_tokens over the
-  -- context unless --fit-max-tokens is on, and maki's prompt estimate
-  -- can read lower than the server's own count.
+  -- No output cap is declared. That alone is not enough to leave
+  -- max_tokens off the wire: the agent sizes every request from its own
+  -- max_turn_output (32768 by default), so build_body below deletes it.
   max_output_tokens = false,
   openai = {
     thinking = { dialect = "standard", requires_support = true },
@@ -93,5 +91,19 @@ maki.provider.register({
         effort = { supported = EFFORT_SUPPORTED, send_off = true },
       }
     end)
+  end,
+
+  -- The last pass before the request goes out, so deleting the key here
+  -- really leaves it off the wire. Strata then runs its own defaults:
+  -- the request gets whatever room the context has left, and
+  -- answer_room closes the thinking early enough to leave the answer
+  -- its quarter of that. A client-sent cap only adds a fitting path -
+  -- the server shortens prompt + max_tokens over the context to the
+  -- room left, and answers 400 instead with --no-fit-max-tokens,
+  -- because maki's prompt estimate can read lower than the server's
+  -- own count.
+  build_body = function(ctx, body)
+    body.max_tokens = nil
+    return body
   end,
 })
