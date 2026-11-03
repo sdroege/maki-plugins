@@ -77,21 +77,19 @@ local MODELS = {
     tier = "medium",
     context_window = 1000000,
     supports_thinking = true,
+    supports_vision = true,
     pricing = { input = 0.11, output = 0.44, cache_write = 0.0, cache_read = 0.022 },
     thinking_fields = efforts("off", "minimal", "low", "medium", "high"),
   },
   {
-    -- Reasons whether asked or not and accepts no "none", so off clamps to
-    -- minimal, the lowest rung of its ladder.
     prefixes = { "minimax-m3" },
     tier = "medium",
     context_window = 1000000,
     max_output_tokens = 65536,
     supports_thinking = true,
     supports_vision = true,
-    requires_thinking = true,
     pricing = { input = 0.44, output = 2.20, cache_write = 0.0, cache_read = 0.11 },
-    thinking_fields = efforts("minimal", "low", "medium", "high"),
+    thinking_fields = efforts("off", "minimal", "low", "medium", "high"),
   },
 }
 

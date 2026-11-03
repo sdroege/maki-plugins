@@ -94,11 +94,13 @@ local MODELS = {
   {
     -- Replaced PublicAI (removed 2026-10-16; billing never operational) as
     -- the co-op's Apertus provider: same open weights, EU ZDR + renewables.
+    -- Context is the co-op's measured 262K; Regolo's catalogue advertises
+    -- 30K input, which the gateway demonstrably exceeds.
     prefixes = { "regolo/apertus-70b" },
     tier = "medium",
-    context_window = 65536,
+    context_window = 262144,
     supports_vision = true,
-    pricing = { input = 0.40, output = 2.10, cache_write = 0.0, cache_read = 0.0 },
+    pricing = { input = 1.00, output = 3.40, cache_write = 0.0, cache_read = 0.0 },
   },
   {
     -- The gateway forces chat_template_kwargs: {enable_thinking: false} for
@@ -108,7 +110,7 @@ local MODELS = {
     tier = "medium",
     context_window = 262144,
     supports_vision = true,
-    pricing = { input = 1.00, output = 4.20, cache_write = 0.0, cache_read = 0.0 },
+    pricing = { input = 0.60, output = 3.40, cache_write = 0.0, cache_read = 0.0 },
   },
   {
     -- Reasons whether asked or not and accepts no "none", so off clamps to

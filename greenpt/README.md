@@ -20,8 +20,7 @@ API no longer lists.
   by default, so every row spells its own `thinking_fields` ladder: off sends
   `reasoning_effort = "none"`, each named level sends itself, and a mode the
   row leaves out sends no field at all, leaving GreenPT's own default in
-  charge. minimax-m3 reasons whether asked or not and accepts no `"none"`,
-  so off clamps to minimal, the lowest rung of its ladder.
+  charge.
 
 ## Keeping the table current
 

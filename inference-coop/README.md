@@ -63,9 +63,9 @@ The docs state the two stay in sync: the LiteLLM config holds the numbers,
 models.md mirrors them. In practice they disagree, and each in its own way,
 so read both before touching a row:
 
-- models.md can state a model is not served while the config is silent about
-  it (it says the co-op does not serve the Tinfoil version of the full
-  GLM-5.3, which the config never lists).
+- The config carries an operator-only model models.md never shows
+  (`tinfoil/nomic-embed-text`, scoped to the admin team for the co-op's own
+  docs RAG).
 - The config's comments record removals models.md no longer shows
   (greenpt/green-r and green-l, removed 2026-10 once GreenPT marked them
   "not recommended").
@@ -86,9 +86,8 @@ the rate now and agree with the row). Regolo's is the per-token catalogue
 embedded in https://regolo.ai/models, plus its rate announcements at
 https://regolo.ai/pricing-update/: the co-op's sources carry Regolo's EUR
 list converted to dollars at 1.16, and the rows record the list itself
-(apertus-70b 0.40/2.10, qwen3.5-122b 1.00/4.20). Regolo has announced new
-rates effective 2026-11-01 (apertus-70b EUR 1.00/3.40, qwen3.5-122b EUR
-0.60/3.40), so re-sync both rows once they are live.
+(apertus-70b 1.00/3.40, qwen3.5-122b 0.60/3.40, Regolo's rates since
+2026-11-01).
 
 The upstream lists settle prices only: which models are rows still comes
 from the co-op's docs, since Regolo serves many models the co-op does not.
