@@ -35,12 +35,17 @@ and subagent transcripts, without touching the session files on disk.
 
 Requires maki 0.6.0 or newer.
 
-```lua
-maki.pack.add({ "https://github.com/<owner>/maki-history" })
+Clone the repository and symlink this plugin into maki's package directory:
+
+```sh
+git clone https://github.com/sdroege/maki-plugins.git ~/src/maki-plugins
+ln -s ~/src/maki-plugins/history ~/.local/share/maki/site/pack/local/start/history
 ```
 
-Or copy this directory into your config dir (e.g.
-`~/.config/maki/pack/history/`).
+Copying the directory works the same way. `maki.pack.add` installs the root of
+a Git repository, not a subdirectory, so it does not work with this monorepo.
+See the [repository README](../README.md#install) for other platforms and
+details.
 
 ## Permissions
 

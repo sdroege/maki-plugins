@@ -70,12 +70,17 @@ off. The rows are the only spelling maki sees, and that is the point.
 
 Requires maki 0.6.0 or newer.
 
-```lua
-maki.pack.add({ "https://github.com/<owner>/maki-greenpt" })
+Clone the repository and symlink this plugin into maki's package directory:
+
+```sh
+git clone https://github.com/sdroege/maki-plugins.git ~/src/maki-plugins
+ln -s ~/src/maki-plugins/greenpt ~/.local/share/maki/site/pack/local/start/greenpt
 ```
 
-Or copy this directory into your config dir (e.g.
-`~/.config/maki/pack/greenpt/`).
+Copying the directory works the same way. `maki.pack.add` installs the root of
+a Git repository, not a subdirectory, so it does not work with this monorepo.
+See the [repository README](../README.md#install) for other platforms and
+details.
 
 ## Usage
 
