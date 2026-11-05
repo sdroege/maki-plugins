@@ -1,0 +1,3 @@
+__pycache__/
+*.pyc
+bash-filter/tests/lib/*.so
