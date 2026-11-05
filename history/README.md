@@ -35,6 +35,11 @@ and subagent transcripts, without touching the session files on disk.
 
 Requires maki 0.6.0 or newer.
 
+> **Note:** this plugin needs maki changes that are not merged upstream yet.
+> Build maki from the [`dev` branch](https://github.com/sdroege/maki/tree/dev)
+> for now. It uses `maki.session.transcript` and compact prompt hints, which
+> are not in upstream maki yet.
+
 Clone the repository and symlink this plugin into maki's package directory:
 
 ```sh

@@ -11,10 +11,14 @@ manifest, and its own README.
 | --- | --- | --- |
 | [`bash-filter`](bash-filter/) | Rejects patch-printing `git diff` calls that omit `--no-ext-diff`, and auto-allows whitelisted read-only `sed` print commands. | maki 0.5.0 |
 | [`greenpt`](greenpt/) | The `greenpt` provider, with a curated model table for GreenPT's OpenAI-compatible API. | maki 0.6.0 |
-| [`history`](history/) | A `history` tool that lets the model read its own transcript, including archived pre-compaction windows and subagent transcripts. | maki 0.6.0 |
+| [`history`](history/) | A `history` tool that lets the model read its own transcript, including archived pre-compaction windows and subagent transcripts. | maki `dev` |
 | [`inference-coop`](inference-coop/) | The `inference-coop` provider, a member-governed gateway in front of Tinfoil, GreenPT and Regolo. | maki 0.6.0 |
-| [`notes`](notes/) | A session-scoped `notes` tool plus a `/notes` picker, with reminders as the context window fills and a read-back after compaction. | maki 0.6.0 |
+| [`notes`](notes/) | A session-scoped `notes` tool plus a `/notes` picker, with reminders as the context window fills and a read-back after compaction. | maki `dev` |
 | [`strata`](strata/) | The `strata` provider for a local Strata server, listing whatever model the server reports. | maki 0.6.0 |
+
+`history` and `notes` need maki changes that are not merged upstream yet.
+Build maki from the [`dev` branch](https://github.com/sdroege/maki/tree/dev)
+for those two.
 
 ### bash-filter
 

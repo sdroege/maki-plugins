@@ -31,6 +31,11 @@ For cross-session, project-scoped notes use the built-in `memory` tool.
 
 Requires maki 0.6.0 or newer.
 
+> **Note:** this plugin needs maki changes that are not merged upstream yet.
+> Build maki from the [`dev` branch](https://github.com/sdroege/maki/tree/dev)
+> for now. It uses the session-scoped notes directory, the `ToolDone` context
+> usage, and compact prompt hints, which are not in upstream maki yet.
+
 Clone the repository and symlink this plugin into maki's package directory:
 
 ```sh
