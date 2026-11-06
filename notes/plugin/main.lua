@@ -340,7 +340,7 @@ local function remind_task(sid, task_id, context_size, context_window)
   local step, state = helpers.should_remind(tasks[task_id], context_size, context_window, { steps[#steps] })
   tasks[task_id] = state
   if step then
-    maki.task.send(task_id, helpers.task_reminder_text(context_size, context_window))
+    maki.task.send({ session = sid }, task_id, helpers.task_reminder_text(context_size, context_window))
   end
 end
 

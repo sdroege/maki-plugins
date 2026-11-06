@@ -124,9 +124,9 @@ local maki = {
     end,
   },
   task = {
-    send = function(id, text)
-      sent[#sent + 1] = { id = id, text = text }
-      return true
+    send = function(target, id, text)
+      sent[#sent + 1] = { session = target and target.session, id = id, text = text }
+      return { name = id }
     end,
   },
   ui = {
@@ -239,6 +239,7 @@ check("task quiet below top step", #sent, 0)
 tooldone("S9", 85, 100, "T1")
 check("task nudged at top step", #sent, 1)
 check("nudge addresses the task", sent[1].id, "T1")
+check("nudge names its session", sent[1].session, "S9")
 check("nudge says wrap up", sent[1].text:find("wrap up", 1, true) ~= nil, true)
 check("nudge names the fill", sent[1].text:find("85% of the window", 1, true) ~= nil, true)
 tooldone("S9", 95, 100, "T1")
