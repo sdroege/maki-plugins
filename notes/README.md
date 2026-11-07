@@ -4,8 +4,9 @@ Session-scoped notes for maki: a `notes` tool the model uses to save
 session state that must survive compaction, plus a `/notes` picker for the
 user.
 
-Notes live under `<state>/sessions/notes/<session-id>/`, so they survive
-compaction and session resume, and are deleted together with the session.
+Notes live under `<state>/sessions/data/<session-id>/notes/`, so they
+survive compaction and session resume, and are deleted together with the
+session.
 For cross-session, project-scoped notes use the built-in `memory` tool.
 
 ## What it adds

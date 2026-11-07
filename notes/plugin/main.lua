@@ -32,11 +32,11 @@ local function toast(msg)
 end
 
 local function notes_dir(session_id)
-  local state = maki.env.state_dir()
-  if not state then
-    return nil, "cannot resolve state dir"
+  local dir, err = maki.session.data_dir({ session = session_id })
+  if not dir then
+    return nil, err
   end
-  return maki.fs.joinpath(state, "sessions", "notes", session_id)
+  return dir
 end
 
 local function list_files(dir, prefix)

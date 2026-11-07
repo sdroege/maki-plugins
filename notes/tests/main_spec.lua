@@ -122,6 +122,12 @@ local maki = {
     current = function()
       return "S1"
     end,
+    data_dir = function(opts)
+      if not STATE.dir then
+        return nil, "cannot resolve state dir"
+      end
+      return STATE.dir .. "/sessions/data/" .. ((opts and opts.session) or "S1") .. "/notes"
+    end,
   },
   task = {
     send = function(target, id, text)
@@ -185,7 +191,7 @@ local function tooldone(sid, size, window, task_id)
 end
 
 local function marker(sid)
-  return "/state/sessions/notes/" .. sid .. "/.reminder"
+  return "/state/sessions/data/" .. sid .. "/notes/.reminder"
 end
 
 local ctx = setmetatable({}, {
