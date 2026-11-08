@@ -190,7 +190,8 @@ local function turncomplete(sid, size, window, task_id)
 end
 
 local function compact_before(value, ctx)
-  return api.slots["agent.compact.before"](nil, value, ctx)
+  local pass_through = function(v) return v end
+  return api.slots["agent.compact.before"](pass_through, value, ctx)
 end
 
 local function marker(sid)

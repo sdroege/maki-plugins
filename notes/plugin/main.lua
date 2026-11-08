@@ -330,18 +330,21 @@ end
 -- next message, and the ask after it proceeds with the read-back attached.
 -- The layer keeps no state, the host caps the defer to one per compaction.
 -- A manual `/compact` and an overflow recovery do what they were asked and
--- only get the read-back.
+-- only get the read-back. The layer only adds its own fields so other
+-- compact.before layers keep theirs.
 maki.api.set_slot("agent.compact.before", function(prev, value, ctx)
   local dir = notes_dir(ctx.session_id)
   local paths = dir and list_files(dir, nil)
   local read_back = helpers.post_compact_text(paths)
-  if value.reason ~= "auto" then
-    return { continue = read_back }
+  if read_back then
+    value.continue = read_back
   end
-  local nudge = ctx.task_id
-      and helpers.task_reminder_text(value.context_size, ctx.context_window)
-    or helpers.reminder_text(value.context_size, ctx.context_window)
-  return { defer = nudge, continue = read_back }
+  if value.reason == "auto" then
+    value.defer = ctx.task_id
+        and helpers.task_reminder_text(value.context_size, ctx.context_window)
+      or helpers.reminder_text(value.context_size, ctx.context_window)
+  end
+  return prev(value, ctx)
 end)
 
 maki.api.create_autocmd({ "TurnComplete", "CompactionDone", "SessionEnd" }, {
