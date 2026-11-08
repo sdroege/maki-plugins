@@ -198,16 +198,14 @@ maki.api.register_prompt_hint({
   content = "The pre-compaction transcript stays readable with the history tool. The summary must still stand on its own, but exact details (full outputs, exact wording) can be left to history search and read_item instead of copying them into the summary.",
 })
 
--- CompactionDone only fires on an actual compaction, so one notify per event
--- needs no hysteresis: unlike the notes reminders there is nothing to re-arm.
-maki.api.create_autocmd({ "CompactionDone" }, {
-  callback = function(ev)
-    local sid = ev.data and ev.data.session_id
-    if not sid then
-      return
-    end
-    local text =
-      "a compaction dropped the older turns from the context; use the history tool to search or read them back instead of redoing work"
-    maki.session.notify(text, { session = sid, wake = true, display = text })
-  end,
-})
+-- The read-back after compaction rides `agent.compact.before`, so it sits
+-- behind the summary for every compaction the same way: auto and manual
+-- `/compact`, overflow, idle or mid-run. A notify instead rides session
+-- activity: one answer late after an auto compaction, a started turn for
+-- `/compact` on an idle session. A layer on an agent.* slot costs every
+-- permission, which is the price of the uniform placement (plugin.toml).
+maki.api.set_slot("agent.compact.before", function(prev, value, ctx)
+  value.continue =
+    "a compaction dropped the older turns from the context; use the history tool to search or read them back instead of redoing work"
+  return prev(value, ctx)
+end)

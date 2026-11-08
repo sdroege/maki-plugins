@@ -27,9 +27,9 @@ and subagent transcripts, without touching the session files on disk.
   earlier wording, subagent findings) and a compact-prompt hint that the
   transcript stays readable, while the summary itself must still stand on
   its own.
-- A `CompactionDone` listener that notifies the session right after a
-  compaction that the dropped turns remain readable with `history`, instead
-  of redoing work.
+- An `agent.compact.before` layer that attaches the same reminder to
+  every compaction, so the model reads dropped turns back with `history`
+  instead of redoing work.
 
 ## Install
 
@@ -54,10 +54,12 @@ details.
 
 ## Permissions
 
-`agent`: the `CompactionDone` listener wakes the session with a `notify`
-observation, and starting a turn requires the `agent` permission.
-`session_read`: reading the transcript through `maki.session.transcript`.
-`session_write`: the `notify` observations themselves.
+The manifest asks for every permission, because the `agent.compact.before`
+layer steers what the agent does next and every `agent.*` slot costs all
+of them: a plugin missing one gets its layer skipped. What the plugin
+actually uses is narrower: `session_read`, to read the transcript through
+`maki.session.transcript` (and to receive the event subscriptions whole),
+and `agent`, for the slot itself.
 
 ## Tests
 

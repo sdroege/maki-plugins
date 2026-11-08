@@ -41,8 +41,8 @@ Exposes the session's own transcript as a tool with `list_windows`,
 `list_items`, `read_item` and `search`. It covers the current context window,
 archived windows dropped by compaction, and subagent transcripts, with stable
 ids and byte-sliced reads. Prompt hints tell the model when to reach for it,
-and a `CompactionDone` listener wakes the session so dropped turns are read
-back instead of redone.
+and an `agent.compact.before` layer attaches the read-back reminder to every
+compaction so dropped turns are read instead of redone.
 
 ### inference-coop
 
