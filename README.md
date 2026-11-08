@@ -58,7 +58,7 @@ Session-scoped notes that survive compaction and session resume. The `notes`
 tool supports `list`, `read`, `search`, `append` and `write`; `/notes` opens a
 picker over the current session's notes. The plugin also nudges the model to
 save state at configurable fractions of the context window, holds an automatic
-compaction for a turn so the save lands, and names the surviving notes when the
+compaction until its save lands, and names the surviving notes when the
 compaction runs. For cross-session notes, use maki's built-in `memory` tool.
 
 ### strata

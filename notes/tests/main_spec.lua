@@ -1,8 +1,8 @@
 -- Spec for plugin/main.lua against a fake maki host: the marker file must
 -- keep the TurnComplete reminder quiet across a restart, re-arm only on a
 -- compaction or a drop below a step, and never surface as a note, and the
--- agent.compact.before layer must defer every automatic ask with a nudge and
--- offer the notes read-back in the same verdict.
+-- agent.compact.before layer must defer every automatic ask of a main
+-- session with a nudge and offer the notes read-back in the same verdict.
 -- Run: sh tests/run.sh (luajit only; maki's host dialect)
 
 package.path = "lua/?.lua;" .. package.path
@@ -327,8 +327,23 @@ restart()
 local main_ctx = { session_id = "S1", context_window = 100 }
 local noted = #notifications
 local verdict = compact_before({ reason = "auto", context_size = 85 }, main_ctx)
-check("auto defers with the save nudge", verdict.defer:find("save important session state", 1, true) ~= nil, true)
+check("auto defers with the save nudge", verdict.defer:find("save session state", 1, true) ~= nil, true)
+check(
+  "defer nudge says it is a pause, not a step",
+  verdict.defer:find("compaction is paused", 1, true) ~= nil and verdict.defer:find("nearly full", 1, true) == nil,
+  true
+)
 check("nudge names the fill", verdict.defer:find("85% of the window", 1, true) ~= nil, true)
+check(
+  "nudge puts the compaction at the run's end",
+  verdict.defer:find("compaction runs when this answer ends the run", 1, true) ~= nil,
+  true
+)
+check(
+  "nudge caps the save at one call and demands a tool-free answer",
+  verdict.defer:find("at most one more tool call", 1, true) ~= nil and verdict.defer:find("no tool calls", 1, true) ~= nil,
+  true
+)
 check("read-back rides the same verdict", verdict.continue:find("a.md", 1, true) ~= nil, true)
 check("read-back says read first", verdict.continue:find("before doing any work", 1, true) ~= nil, true)
 check("the layer notifies nobody", #notifications, noted)
@@ -341,13 +356,11 @@ verdict = compact_before({ reason = "overflow", context_size = 100 }, main_ctx)
 check_nil("overflow never defers", verdict.defer)
 check("overflow reads back", verdict.continue:find("a.md", 1, true) ~= nil, true)
 
--- A subagent answers the same way, its nudge the wrap-up text. It rides the
--- verdict into the subagent's own run, so there is nothing to address a
--- mailbox it never reads.
+-- A subagent gets the read-back but never a defer: its run has no
+-- after-the-run to wait for, and the host ignores a defer there anyway.
 local sub_ctx = { session_id = "S1", task_id = "T7", context_window = 100 }
 verdict = compact_before({ reason = "auto", context_size = 85 }, sub_ctx)
-check("subagent nudge says wrap up", verdict.defer:find("wrap up", 1, true) ~= nil, true)
-check("subagent nudge names the fill", verdict.defer:find("85% of the window", 1, true) ~= nil, true)
+check_nil("subagent never defers", verdict.defer)
 check("subagent reads back the session notes", verdict.continue:find("a.md", 1, true) ~= nil, true)
 check("subagent notifies nobody", #notifications, noted)
 
@@ -359,6 +372,11 @@ local s2_ctx = { session_id = "S2", context_window = 100 }
 verdict = compact_before({ reason = "auto", context_size = 85 }, s2_ctx)
 check("defers without notes too", verdict.defer ~= nil, true)
 check_nil("no read-back without notes", verdict.continue)
+
+-- Near the window's edge the wrap-up turn cannot fit, so the nudge would
+-- promise a settle the overflow recovery tramples anyway.
+verdict = compact_before({ reason = "auto", context_size = 95 }, main_ctx)
+check_nil("an ask at the window's edge never defers", verdict.defer)
 
 if failures > 0 then
   print(("\n%d test(s) failed"):format(failures))
