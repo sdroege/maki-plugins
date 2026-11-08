@@ -1,6 +1,8 @@
--- Spec for plugin/main.lua's reminder hysteresis against a fake maki host:
--- the marker file must keep the reminder quiet across a restart, re-arm only
--- on a compaction or a drop below a step, and never surface as a note.
+-- Spec for plugin/main.lua against a fake maki host: the marker file must
+-- keep the TurnComplete reminder quiet across a restart, re-arm only on a
+-- compaction or a drop below a step, and never surface as a note, and the
+-- agent.compact.before layer must defer every automatic ask with a nudge and
+-- offer the notes read-back in the same verdict.
 -- Run: sh tests/run.sh (luajit only; maki's host dialect)
 
 package.path = "lua/?.lua;" .. package.path
@@ -25,7 +27,6 @@ end
 local disk = { files = {}, dirs = {} }
 local STATE = { dir = "/state" }
 local notifications = {}
-local sent = {}
 
 local function fs()
   local self = {}
@@ -96,7 +97,7 @@ local function fs()
   return self
 end
 
-local api = { autocmds = {}, tools = {} }
+local api = { autocmds = {}, tools = {}, slots = {} }
 
 local maki = {
   env = { state_dir = function()
@@ -114,6 +115,9 @@ local maki = {
         api.autocmds[name] = opts.callback
       end
     end,
+    set_slot = function(name, fn)
+      api.slots[name] = fn
+    end,
   },
   session = {
     notify = function(text, opts)
@@ -127,12 +131,6 @@ local maki = {
         return nil, "cannot resolve state dir"
       end
       return STATE.dir .. "/sessions/data/" .. ((opts and opts.session) or "S1") .. "/notes"
-    end,
-  },
-  task = {
-    send = function(target, id, text)
-      sent[#sent + 1] = { session = target and target.session, id = id, text = text }
-      return { name = id }
     end,
   },
   ui = {
@@ -171,6 +169,7 @@ end
 local function restart()
   api.autocmds = {}
   api.tools = {}
+  api.slots = {}
   dofile("plugin/main.lua")
 end
 
@@ -181,13 +180,17 @@ local function fire(event, data)
   end
 end
 
-local function tooldone(sid, size, window, task_id)
-  fire("ToolDone", {
+local function turncomplete(sid, size, window, task_id)
+  fire("TurnComplete", {
     session_id = sid,
     context_size = size,
     context_window = window,
     task_id = task_id,
   })
+end
+
+local function compact_before(value, ctx)
+  return api.slots["agent.compact.before"](nil, value, ctx)
 end
 
 local function marker(sid)
@@ -209,10 +212,8 @@ local ctx = setmetatable({}, {
 
 restart()
 
-restart()
-
 -- Crossing each step fires one nudge and updates the marker.
-tooldone("S1", 42, 100)
+turncomplete("S1", 42, 100)
 check("first step notifies", #notifications, 1)
 check("first step text", notifications[1].text:find("42% full", 1, true) ~= nil, true)
 check("notify targets session", notifications[1].opts.session, "S1")
@@ -220,94 +221,73 @@ check("notify wakes", notifications[1].opts.wake, true)
 check("notify displays", notifications[1].opts.display, notifications[1].text)
 check("marker holds first step", disk.files[marker("S1")], "0.4")
 
-tooldone("S1", 40, 100)
+turncomplete("S1", 40, 100)
 check("quiet between steps", #notifications, 1)
-tooldone("S1", 65, 100)
+turncomplete("S1", 65, 100)
 check("second step notifies", #notifications, 2)
 check("second step text", notifications[2].text:find("65% full", 1, true) ~= nil, true)
 check("marker holds second step", disk.files[marker("S1")], "0.6")
 
 -- A jump over several steps fires only the highest.
-tooldone("S1", 90, 100)
+turncomplete("S1", 90, 100)
 check("jump notifies top only", #notifications, 3)
 check("top step text", notifications[3].text:find("nearly full", 1, true) ~= nil, true)
 check("marker holds top step", disk.files[marker("S1")], "0.8")
 
 -- Hysteresis: quiet while the crossing stays outstanding.
-tooldone("S1", 92, 100)
+turncomplete("S1", 92, 100)
 check("quiet while outstanding", #notifications, 3)
 
--- A subagent's ToolDone says nothing about this session's context: it nudges
--- its own run, only at the top step, with hysteresis the parent never sees
--- and a marker the parent never gets.
-tooldone("S9", 55, 100, "T1")
-check("task quiet below top step", #sent, 0)
-tooldone("S9", 85, 100, "T1")
-check("task nudged at top step", #sent, 1)
-check("nudge addresses the task", sent[1].id, "T1")
-check("nudge names its session", sent[1].session, "S9")
-check("nudge says wrap up", sent[1].text:find("wrap up", 1, true) ~= nil, true)
-check("nudge names the fill", sent[1].text:find("85% of the window", 1, true) ~= nil, true)
-tooldone("S9", 95, 100, "T1")
-check("task hysteresis holds", #sent, 1)
-tooldone("S9", 88, 100, "T2")
-check("each task its own state", #sent, 2)
-check("second task addressed", sent[2].id, "T2")
-tooldone("S9", 40, 100, "T1")
-tooldone("S9", 82, 100, "T1")
-check("task re-arms below top", #sent, 3)
-check("re-armed nudge for T1", sent[3].id, "T1")
-check("parent notifications untouched", #notifications, 3)
-check_nil("task leaves no marker", disk.files[marker("S9")])
--- An old host names no task, only a subagent flag: an unaddressable run stays quiet.
-fire("ToolDone", { session_id = "S9", context_size = 99, context_window = 100, subagent = true })
-check("unnamed subagent stays quiet", #sent, 3)
-check("unnamed subagent leaves no marker", disk.files[marker("S9")] == nil, true)
-check("unnamed subagent no parent nudge", #notifications, 3)
+-- A subagent's TurnComplete carries its own gauge and says nothing about the
+-- parent session: no nudge, no marker. The compact.before layer steers it.
+turncomplete("S9", 55, 100, "T1")
+turncomplete("S9", 99, 100, "T1")
+check("subagent TurnComplete is quiet", #notifications, 3)
+check_nil("subagent leaves no marker", disk.files[marker("S9")])
 
 -- Falling below the top re-arms it but not the lower steps; the marker
 -- shrinks with the state so a restart cannot resurrect a stale step.
-tooldone("S1", 50, 100)
+turncomplete("S1", 50, 100)
 check("marker shrinks with state", disk.files[marker("S1")], "0.4")
-tooldone("S1", 65, 100)
+turncomplete("S1", 65, 100)
 check("refires only the re-armed step", #notifications, 4)
 check("second step refire text", notifications[4].text:find("65% full", 1, true) ~= nil, true)
-tooldone("S1", 90, 100)
+turncomplete("S1", 90, 100)
 check("top refires after second", #notifications, 5)
 
 -- The marker keeps the reminder quiet across a restart.
 restart()
-tooldone("S1", 90, 100)
+turncomplete("S1", 90, 100)
 check("restart stays quiet", #notifications, 5)
 
 -- SessionEnd must not clear the marker: shutdown and reload fire it too.
 fire("SessionEnd", { session_id = "S1", reason = "shutdown" })
-tooldone("S1", 90, 100)
+turncomplete("S1", 90, 100)
 check("session end keeps the marker quiet", #notifications, 5)
 check("marker still there", disk.files[marker("S1")], "0.8")
 
 -- CompactionDone re-arms: context dropped, next crossing notifies again.
 fire("CompactionDone", { session_id = "S1" })
 check_nil("compaction clears marker", disk.files[marker("S1")])
-tooldone("S1", 85, 100)
+turncomplete("S1", 85, 100)
 check("compaction re-arms", #notifications, 6)
 
 -- A restart replants nothing: the re-armed reminder fires once more.
 restart()
-tooldone("S1", 85, 100)
+turncomplete("S1", 85, 100)
 check("restart after compaction stays quiet", #notifications, 6)
 
 -- Markers are per session: S2 fires from scratch while S1 stays quiet.
-tooldone("S2", 42, 100)
+turncomplete("S2", 42, 100)
 check("other session fires", #notifications, 7)
 check("other session marker", disk.files[marker("S2")], "0.4")
-tooldone("S1", 90, 100)
+turncomplete("S1", 90, 100)
 check("first session still quiet", #notifications, 7)
 
--- A stale marker clears on the first ToolDone below every step.
-tooldone("S1", 20, 100)
+-- A stale marker clears on the first TurnComplete below every step.
+turncomplete("S1", 20, 100)
 check_nil("stale marker cleared", disk.files[marker("S1")])
-tooldone("S1", 42, 100)
+turncomplete("S1", 42, 100)
 check("fires after stale clear", #notifications, 8)
 
 -- The marker never surfaces as a note.
@@ -321,12 +301,12 @@ check("list shows the note", listing:find("a.md", 1, true) ~= nil, true)
 -- Without a state dir the reminder falls back to in-memory hysteresis.
 STATE.dir = nil
 restart()
-tooldone("S3", 85, 100)
+turncomplete("S3", 85, 100)
 check("fires without state dir", #notifications, 9)
-tooldone("S3", 90, 100)
+turncomplete("S3", 90, 100)
 check("hysteresis without state dir", #notifications, 9)
-tooldone("S3", 50, 100)
-tooldone("S3", 85, 100)
+turncomplete("S3", 50, 100)
+turncomplete("S3", 85, 100)
 check("re-arms without state dir", #notifications, 10)
 STATE.dir = "/state"
 
@@ -334,30 +314,50 @@ STATE.dir = "/state"
 -- counts as the top step, so upgrading does not re-nudge old sessions.
 disk.files[marker("S4")] = "1"
 restart()
-tooldone("S4", 90, 100)
+turncomplete("S4", 90, 100)
 check("legacy marker stays quiet", #notifications, 10)
-tooldone("S4", 20, 100)
+turncomplete("S4", 20, 100)
 check_nil("legacy marker cleared below all steps", disk.files[marker("S4")])
 
--- CompactionDone with notes wakes the model to read them before working.
--- S1 still holds a.md from the marker test above; S2 carries only the
--- hidden marker, so it must stay quiet.
+-- agent.compact.before: an automatic ask defers with a nudge and carries the
+-- notes read-back in the same verdict; the once cap and the delivery are the
+-- host's. S1 still holds a.md from the marker test above.
+restart()
+local main_ctx = { session_id = "S1", context_window = 100 }
 local noted = #notifications
-fire("CompactionDone", { session_id = "S1" })
-check("compaction notifies with notes", #notifications, noted + 1)
-check("compaction notify wakes", notifications[#notifications].opts.wake, true)
-check("compaction notify displays", notifications[#notifications].opts.display, notifications[#notifications].text)
-check("compaction notify targets session", notifications[#notifications].opts.session, "S1")
-check("compaction notify names the note", notifications[#notifications].text:find("a.md", 1, true) ~= nil, true)
-check(
-  "compaction notify says read first",
-  notifications[#notifications].text:find("before doing any work", 1, true) ~= nil,
-  true
-)
+local verdict = compact_before({ reason = "auto", context_size = 85 }, main_ctx)
+check("auto defers with the save nudge", verdict.defer:find("save important session state", 1, true) ~= nil, true)
+check("nudge names the fill", verdict.defer:find("85% of the window", 1, true) ~= nil, true)
+check("read-back rides the same verdict", verdict.continue:find("a.md", 1, true) ~= nil, true)
+check("read-back says read first", verdict.continue:find("before doing any work", 1, true) ~= nil, true)
+check("the layer notifies nobody", #notifications, noted)
 
--- No notes, no nudge: S2 carries only the hidden marker.
-fire("CompactionDone", { session_id = "S2" })
-check("compaction quiet without notes", #notifications, noted + 1)
+-- A manual /compact and an overflow recovery are obeyed, only read back.
+verdict = compact_before({ reason = "manual", context_size = 60, request_instructions = "tidy up" }, main_ctx)
+check_nil("manual never defers", verdict.defer)
+check("manual reads back", verdict.continue:find("a.md", 1, true) ~= nil, true)
+verdict = compact_before({ reason = "overflow", context_size = 100 }, main_ctx)
+check_nil("overflow never defers", verdict.defer)
+check("overflow reads back", verdict.continue:find("a.md", 1, true) ~= nil, true)
+
+-- A subagent answers the same way, its nudge the wrap-up text. It rides the
+-- verdict into the subagent's own run, so there is nothing to address a
+-- mailbox it never reads.
+local sub_ctx = { session_id = "S1", task_id = "T7", context_window = 100 }
+verdict = compact_before({ reason = "auto", context_size = 85 }, sub_ctx)
+check("subagent nudge says wrap up", verdict.defer:find("wrap up", 1, true) ~= nil, true)
+check("subagent nudge names the fill", verdict.defer:find("85% of the window", 1, true) ~= nil, true)
+check("subagent reads back the session notes", verdict.continue:find("a.md", 1, true) ~= nil, true)
+check("subagent notifies nobody", #notifications, noted)
+
+-- The layer is stateless, so every auto ask carries the same offer, and
+-- without notes the read-back is simply empty.
+verdict = compact_before({ reason = "auto", context_size = 90 }, main_ctx)
+check("every auto ask defers", verdict.defer ~= nil, true)
+local s2_ctx = { session_id = "S2", context_window = 100 }
+verdict = compact_before({ reason = "auto", context_size = 85 }, s2_ctx)
+check("defers without notes too", verdict.defer ~= nil, true)
+check_nil("no read-back without notes", verdict.continue)
 
 if failures > 0 then
   print(("\n%d test(s) failed"):format(failures))

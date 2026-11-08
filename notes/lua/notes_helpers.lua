@@ -278,7 +278,8 @@ function M.check_size(existing_bytes, text)
 end
 
 -- Multi-step hysteresis. state counts how many steps have been crossed (and
--- thus nudged); a ToolDone that crosses several new steps at once fires only
+-- thus nudged); a TurnComplete that crosses several new steps at once fires
+-- only
 -- the highest, so one event never spams several nudges. Falling below a step
 -- re-arms it; the state simply tracks the steps the current fill satisfies.
 -- Returns the newly crossed step to fire (nil when quiet) and the next state.
@@ -335,10 +336,11 @@ function M.compact_hint(paths)
     .. ". Include in your summary the note filenames and an instruction to run `notes list` and read the relevant notes before redoing any work (the summary alone can miss filenames). Do not copy note contents into the summary."
 end
 
--- Delivered as a woken observation right after CompactionDone, so the first
--- post-compaction turn starts by reading notes instead of redoing work. The
--- summary is passive text the model can skim; this is a fresh message that
--- names the files itself, so it does not depend on the summary carrying them.
+-- Returned as `continue` from agent.compact.before on the pass that lets the
+-- compaction through, so the first post-compaction turn starts by reading
+-- notes instead of redoing work. The summary is passive text the model can
+-- skim; this is a fresh message that names the files itself, so it does not
+-- depend on the summary carrying them.
 function M.post_compact_text(paths)
   if not paths or #paths == 0 then
     return nil

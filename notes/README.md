@@ -14,17 +14,23 @@ For cross-session, project-scoped notes use the built-in `memory` tool.
 - `notes` tool: `list`, `read` (with line ranges), `search`, `append`,
   `write`. Strongly consistent local files, capped at 1 MiB per note.
   Limit-like arguments are clamped, never rejected. No model-facing delete.
-- A `ToolDone` listener that nudges the model to save important state to
+- A `TurnComplete` listener that nudges the model to save important state to
   `notes` as the context window fills, at 40%, 60%, and 80% of the window
   (configurable), with hysteresis: each step fires once per crossing, one
   nudge per event even when a jump crosses several steps.
 - Prompt hints: a system-prompt nudge to save/read notes around compaction,
   and a compact-prompt hint listing the session's note filenames so the
   compaction summary tells the model what to read back.
-- A `CompactionDone` listener that wakes the session with an observation
-  naming the surviving notes and telling the model to read them before
-  doing any work. The summary alone is passive text the model can skim
-  past; the woken observation is what makes the read-back actually happen.
+- An `agent.compact.before` layer that gives every automatic compaction one
+  turn of grace: the ask defers with a nudge to save notes, delivered as the
+  model's next message, and the ask after it runs with a read-back naming the
+  surviving notes attached to the message the agent resumes with. The host
+  caps the defer to one per compaction, so the layer keeps no state. A manual
+  `/compact` and an overflow recovery are obeyed at once, only read back. The
+  summary alone is passive text the model can skim past; the read-back is a
+  fresh message that names the files, which is what makes it actually happen.
+  Subagent runs ride the same hook: they are steered from inside their own
+  run, so the save-before and read-back work without ever addressing them.
 - `/notes`: a picker over the current session's notes. Enter opens a file
   in `$EDITOR`, Ctrl+D deletes.
 
@@ -34,9 +40,9 @@ Requires maki 0.6.0 or newer.
 
 > **Note:** this plugin needs maki changes that are not merged upstream yet.
 > Build maki from the [`dev` branch](https://github.com/sdroege/maki/tree/dev)
-> for now. It uses the session-scoped notes directory, the `ToolDone` context
-> usage and its `task_id`, the session-targeted `maki.task.send`, and compact
-> prompt hints, which are not in upstream maki yet.
+> for now. It uses the session-scoped notes directory, the `TurnComplete`
+> autocmd, compact prompt hints, and the `defer` verdict of
+> `agent.compact.before`, which are not in upstream maki yet.
 
 Clone the repository and symlink this plugin into maki's package directory:
 
@@ -69,12 +75,14 @@ the middle ones to update, the last to save before compaction.
 
 ## Permissions
 
-`fs_read` and `fs_write`, used only for the session's own notes dir and
-the `/notes` picker. `agent`, so the reminders and the post-compaction
-read-back can wake the session with a `notify` observation.
-`session_write`, for the `notify` observations themselves.
-`session_read`, so the `ToolDone` subscription arrives whole instead of
-stripped to its metadata.
+The manifest asks for every permission, because the `agent.compact.before`
+layer steers what the agent does next and every `agent.*` slot costs all
+of them: a plugin missing one gets its layer skipped. What the plugin
+actually uses is narrower: `fs_read` and `fs_write`, for the session's own
+notes dir and the `/notes` picker; `agent` and `session_write`, so the
+reminders can wake the session with a `notify` observation; `session_read`,
+so the `TurnComplete` subscription arrives whole instead of stripped to its
+metadata.
 
 ## Tests
 

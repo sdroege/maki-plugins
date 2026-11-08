@@ -291,10 +291,6 @@ maki.api.register_prompt_hint({
 
 local outstanding = {}
 
--- A subagent run's hysteresis, per session and task id. Never marked on
--- disk: the run cannot outlive the session, and the notes dir is not its own.
-local outstanding_task = {}
-
 -- The reminder's hysteresis state does not survive a restart on its own, so
 -- every fired nudge also plants a marker file holding the nudged step: a
 -- restart otherwise re-arms the steps and the session gets nudged twice. The
@@ -302,7 +298,7 @@ local outstanding_task = {}
 -- the notes takes it too, and list_files hides it because it is not a note.
 -- Only CompactionDone clears it: shutdown and reload fire SessionEnd, and
 -- clearing there would defeat the marker; a session that drops below a step
--- re-arms it by itself on the next ToolDone.
+-- re-arms it by itself on the next TurnComplete.
 local REMINDER_MARKER = ".reminder"
 
 local function marker_path(sid)
@@ -327,58 +323,43 @@ local function marker_clear(sid)
   end
 end
 
--- Only the top step earns a subagent a nudge: asking a research task to wrap
--- up at 40% would only annoy it. The nudge reaches the run itself through
--- maki.task.send, which it reads at its next turn boundary.
-local function remind_task(sid, task_id, context_size, context_window)
-  local tasks = outstanding_task[sid]
-  if not tasks then
-    tasks = {}
-    outstanding_task[sid] = tasks
+-- The last save before a compaction and the read-back after it ride
+-- `agent.compact.before`, which fires inside the run it steers: a subagent
+-- gets both without ever being addressed. The first automatic ask buys a
+-- turn: the defer skips the compaction and hands the model the nudge as its
+-- next message, and the ask after it proceeds with the read-back attached.
+-- The layer keeps no state, the host caps the defer to one per compaction.
+-- A manual `/compact` and an overflow recovery do what they were asked and
+-- only get the read-back.
+maki.api.set_slot("agent.compact.before", function(prev, value, ctx)
+  local dir = notes_dir(ctx.session_id)
+  local paths = dir and list_files(dir, nil)
+  local read_back = helpers.post_compact_text(paths)
+  if value.reason ~= "auto" then
+    return { continue = read_back }
   end
-  local steps = helpers.remind_steps()
-  local step, state = helpers.should_remind(tasks[task_id], context_size, context_window, { steps[#steps] })
-  tasks[task_id] = state
-  if step then
-    maki.task.send({ session = sid }, task_id, helpers.task_reminder_text(context_size, context_window))
-  end
-end
+  local nudge = ctx.task_id
+      and helpers.task_reminder_text(value.context_size, ctx.context_window)
+    or helpers.reminder_text(value.context_size, ctx.context_window)
+  return { defer = nudge, continue = read_back }
+end)
 
-maki.api.create_autocmd({ "ToolDone", "CompactionDone", "SessionEnd" }, {
+maki.api.create_autocmd({ "TurnComplete", "CompactionDone", "SessionEnd" }, {
   callback = function(ev)
     local sid = ev.data and ev.data.session_id
     if not sid then
       return
     end
-    if ev.event ~= "ToolDone" then
+    if ev.event ~= "TurnComplete" then
       outstanding[sid] = nil
-      if ev.event == "SessionEnd" then
-        outstanding_task[sid] = nil
-      end
       if ev.event == "CompactionDone" then
         marker_clear(sid)
-        -- The summary is passive text the model can skim past, so deliver the
-        -- read-back instruction as a woken observation: the next turn starts
-        -- by reading notes, not by redoing work. Naming the files here means
-        -- this does not depend on the summary carrying them.
-        local dir = notes_dir(sid)
-        local paths = dir and list_files(dir, nil)
-        local text = helpers.post_compact_text(paths)
-        if text then
-          maki.session.notify(text, { session = sid, wake = true, display = text })
-        end
       end
       return
     end
-    -- A subagent's ToolDone carries the subagent's own context usage, which
-    -- says nothing about this session's. A named task gets its own nudge;
-    -- an older host only flagged subagents, and a run nobody can address
-    -- stays quiet.
+    -- A subagent's TurnComplete carries its own gauge; its save and read-back
+    -- are the compact.before layer's business, not the steps'.
     if ev.data.task_id then
-      remind_task(sid, ev.data.task_id, ev.data.context_size, ev.data.context_window)
-      return
-    end
-    if ev.data.subagent then
       return
     end
     -- Seed the in-memory state from the marker: a restart or a session switch
