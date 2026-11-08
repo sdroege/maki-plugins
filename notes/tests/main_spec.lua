@@ -356,6 +356,13 @@ verdict = compact_before({ reason = "overflow", context_size = 100 }, main_ctx)
 check_nil("overflow never defers", verdict.defer)
 check("overflow reads back", verdict.continue:find("a.md", 1, true) ~= nil, true)
 
+-- `continue` is one string shared by every compact.before layer, so the
+-- layer appends its read-back to what an earlier layer wrote instead of
+-- replacing it.
+verdict = compact_before({ reason = "manual", context_size = 60, continue = "an earlier layer spoke" }, main_ctx)
+check("keeps another layer's continue", verdict.continue:find("an earlier layer spoke", 1, true) ~= nil, true)
+check("appends the read-back after it", verdict.continue:find("an earlier layer spoke") < verdict.continue:find("a.md"), true)
+
 -- A subagent gets the read-back but never a defer: its run has no
 -- after-the-run to wait for, and the host ignores a defer there anyway.
 local sub_ctx = { session_id = "S1", task_id = "T7", context_window = 100 }

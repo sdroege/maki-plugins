@@ -344,8 +344,10 @@ maki.api.set_slot("agent.compact.before", function(prev, value, ctx)
   local dir = notes_dir(ctx.session_id)
   local paths = dir and list_files(dir, nil)
   local read_back = helpers.post_compact_text(paths)
+  -- `continue` is one string, so layers share it by appending: assigning it
+  -- would drop whatever an earlier layer put there.
   if read_back then
-    value.continue = read_back
+    value.continue = value.continue and (value.continue .. "\n\n" .. read_back) or read_back
   end
   if
     value.reason == "auto"

@@ -205,7 +205,10 @@ maki.api.register_prompt_hint({
 -- `/compact` on an idle session. A layer on an agent.* slot costs every
 -- permission, which is the price of the uniform placement (plugin.toml).
 maki.api.set_slot("agent.compact.before", function(prev, value, ctx)
-  value.continue =
+  local own =
     "a compaction dropped the older turns from the context; use the history tool to search or read them back instead of redoing work"
+  -- `continue` is one string, so layers share it by appending: assigning it
+  -- would drop whatever an earlier layer put there.
+  value.continue = value.continue and (value.continue .. "\n\n" .. own) or own
   return prev(value, ctx)
 end)
