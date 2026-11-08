@@ -232,7 +232,7 @@ check(
   "post-compact names files",
   h.post_compact_text({ "a.md", "b.md" }),
   "Compaction just replaced this session's history with a summary, which can miss details. "
-    .. "Notes that survived it: a.md, b.md. Read the relevant ones with the `notes` tool before doing any work "
+    .. "Notes still saved: a.md, b.md. Read the relevant ones with the `notes` tool before doing any work "
     .. "(e.g. `notes read <path>`; `notes list` shows them all), then continue the task."
 )
 local many2 = {}

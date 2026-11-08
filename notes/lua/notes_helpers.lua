@@ -362,7 +362,7 @@ function M.post_compact_text(paths)
     suffix = ", and " .. (#paths - shown) .. " more"
   end
   return "Compaction just replaced this session's history with a summary, which can miss details. "
-    .. "Notes that survived it: "
+    .. "Notes still saved: "
     .. table.concat(names, ", ")
     .. suffix
     .. ". Read the relevant ones with the `notes` tool before doing any work "
