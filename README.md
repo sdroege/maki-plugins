@@ -9,7 +9,7 @@ manifest, and its own README.
 
 | Plugin | What it adds | Requires |
 | --- | --- | --- |
-| [`bash-filter`](bash-filter/) | Rejects patch-printing `git diff` calls that omit `--no-ext-diff`, and auto-allows whitelisted read-only `sed` print commands. | maki 0.5.0 |
+| [`bash-filter`](bash-filter/) | Rejects patch-printing `git diff` calls that omit `--no-ext-diff` and `rg` calls that use replacement mode or run external commands, and auto-allows whitelisted read-only `sed` print commands. | maki 0.5.0 |
 | [`greenpt`](greenpt/) | The `greenpt` provider, with a curated model table for GreenPT's OpenAI-compatible API. | maki 0.6.0 |
 | [`history`](history/) | A `history` tool that lets the model read its own transcript, including archived pre-compaction windows and subagent transcripts. | maki `dev` |
 | [`inference-coop`](inference-coop/) | The `inference-coop` provider, a member-governed gateway in front of Tinfoil, GreenPT and Regolo. | maki 0.6.0 |
@@ -24,9 +24,12 @@ for those two.
 
 A safety and convenience layer. It hooks maki's bash input slot and rejects a
 `git diff` that would print a full external-diff patch, pointing at the same
-command with `--no-ext-diff`. It also hooks the permission prompt and
-auto-accepts `sed` invocations whose script only prints (`[addr[,addr]]p`),
-provided the shell cannot rewrite the script on the way to `sed`.
+command with `--no-ext-diff`. It also rejects `rg -r` (and `--replace`), which
+is replacement mode rather than recursive search, plus `rg --pre` and
+`rg --hostname-bin`, which run external commands hidden inside an argument.
+Finally, it hooks the permission prompt and auto-accepts `sed` invocations
+whose script only prints (`[addr[,addr]]p`), provided the shell cannot rewrite
+the script on the way to `sed`.
 
 ### greenpt
 

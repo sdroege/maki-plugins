@@ -1,8 +1,10 @@
 local git_diff = require("git_diff")
+local rg = require("rg")
 local safe_sed = require("safe_sed")
 
 local FILTERS = {
   git_diff.filter,
+  rg.filter,
 }
 
 maki.api.set_slot("tool.bash.input", function(prev, input, ctx)

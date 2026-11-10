@@ -5,4 +5,5 @@ set -e
 cd "$(dirname "$0")/.."
 luajit tests/git_diff_spec.lua
 luajit tests/command_spec.lua
+luajit tests/rg_spec.lua
 luajit tests/safe_sed_spec.lua
