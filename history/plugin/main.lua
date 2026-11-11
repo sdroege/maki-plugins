@@ -25,7 +25,7 @@ local function transcript(ctx)
   if not sid then
     return nil, "no session"
   end
-  local data, err = maki.session.transcript({ session = sid, archives = true })
+  local data, err = maki.session.transcript({ session = sid })
   if not data then
     return nil, err
   end
