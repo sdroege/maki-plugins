@@ -165,14 +165,11 @@ end
 function M.format_windows(windows)
   local lines = {}
   for _, window in ipairs(windows or {}) do
-    local items = M.flatten_items(window)
-    -- Rendered length, so the number matches what read_item can return.
-    local chars = 0
-    for _, item in ipairs(items) do
-      chars = chars + #M.render_message(item)
-    end
-    lines[#lines + 1] =
-      window.id .. "  " .. #items .. " items  " .. chars .. " chars  " .. os.date("%Y-%m-%d %H:%M", window.created_at or 0)
+    lines[#lines + 1] = window.id
+      .. "  "
+      .. (window.kind or "unknown")
+      .. "  "
+      .. os.date("%Y-%m-%d %H:%M", window.created_at or 0)
   end
   return table.concat(lines, "\n")
 end

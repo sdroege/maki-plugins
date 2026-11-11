@@ -1,14 +1,15 @@
 # history
 
 A `history` tool for maki that lets the model read the session's own
-transcript: the current context window, the archived pre-compaction windows,
-and subagent transcripts, without touching the session files on disk.
+transcript: the current context window, the archived windows a compaction or
+rewind dropped, and subagent transcripts, without touching the session files
+on disk.
 
 ## What it adds
 
 - `history` tool:
-  - `list_windows`: id, item count, total chars, and creation time per
-    window, current first.
+  - `list_windows`: id, what sealed the window (compaction or rewind), and
+    creation time per window, current first.
   - `list_items`: one line per item with a `window/item` id the model chains
     into `read_item`; filter by `role` and `sub` (`"main"` or a subagent
     name, the task description that spawned it).
@@ -36,8 +37,9 @@ Requires maki 0.6.0 or newer.
 
 > **Note:** this plugin needs maki changes that are not merged upstream yet.
 > Build maki from the [`dev` branch](https://github.com/sdroege/maki/tree/dev)
-> for now. It uses `maki.session.transcript` and the session context of
-> prompt hint callbacks, which are not merged upstream yet.
+> for now. It uses `maki.session.windows`, `maki.session.messages` and
+> `maki.session.subagents`, and the session context of prompt hint callbacks,
+> which are not merged upstream yet.
 
 Clone the repository and symlink this plugin into maki's package directory:
 
@@ -57,8 +59,9 @@ The manifest asks for every permission, because the `agent.compact.before`
 layer steers what the agent does next and every `agent.*` slot costs all
 of them: a plugin missing one gets its layer skipped. What the plugin
 actually uses is narrower: `session_read`, to read the transcript through
-`maki.session.transcript` (and to receive the event subscriptions whole),
-and `agent`, for the slot itself.
+`maki.session.windows`, `maki.session.messages` and `maki.session.subagents`
+(and to receive the event subscriptions whole), and `agent`, for the slot
+itself.
 
 ## Tests
 

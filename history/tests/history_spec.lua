@@ -24,8 +24,8 @@ local function msg(role, text)
   return { role = role, content = { { type = "text", text = text } } }
 end
 
-local function window(id, messages, subagents)
-  return { id = id, created_at = 0, messages = messages, subagents = subagents or {} }
+local function window(id, messages, subagents, kind)
+  return { id = id, created_at = 0, kind = kind, messages = messages, subagents = subagents or {} }
 end
 
 -- flatten_items
@@ -275,11 +275,13 @@ local zero_date = os.date("%Y-%m-%d %H:%M", 0)
 check(
   "format_windows",
   h.format_windows({
-    window("current", { msg("user", "a") }, { { name = "s", messages = { msg("user", "b") } } }),
-    window("1", {}),
+    window("current", {}, {}, "current"),
+    window("1", {}, {}, "compaction"),
+    window("2", {}, {}, "rewind"),
   }),
-  "current  2 items  2 chars  " .. zero_date .. "\n1  0 items  0 chars  " .. zero_date
+  "current  current  " .. zero_date .. "\n1  compaction  " .. zero_date .. "\n2  rewind  " .. zero_date
 )
+check("format_windows unknown kind", h.format_windows({ window("1", {}) }), "1  unknown  " .. zero_date)
 check("format_windows empty", h.format_windows({}), "")
 check("format_windows nil", h.format_windows(nil), "")
 
