@@ -74,9 +74,9 @@ end
 -- messages in order. Main items are numbered by position in the window's
 -- log, stable because archives are immutable and the current window only
 -- shrinks via a rewrite that archives first. A subagent's items are keyed
--- by its spawn slot and position within its transcript ("s2/3"), both
--- stable once the transcript attaches, so the ids survive the main log
--- growing between calls.
+-- by its position among the window's subagents and position within its
+-- transcript ("s2/3"), both stable once the transcript attaches, so the ids
+-- survive the main log growing between calls.
 function M.flatten_items(window)
   local items = {}
   for i, msg in ipairs(window.messages or {}) do

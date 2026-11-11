@@ -20,10 +20,11 @@ on disk.
     around each match and a per-item match count when an item matches more
     than once.
 - Main-thread items are numbered by position in the window's log, subagent
-  items by spawn slot and position within their transcript (`s2/3`), so ids
-  stay valid as the transcript grows. Archives are immutable. Unknown ids
-  answer a clean not-found. Limit-like arguments are clamped, never
-  rejected, and output goes through maki's per-tool output limits.
+  items by their position among the window's subagents and position within
+  their transcript (`s2/3`), so ids stay valid as the transcript grows.
+  Archives are immutable. Unknown ids answer a clean not-found. Limit-like
+  arguments are clamped, never rejected, and output goes through maki's
+  per-tool output limits.
 - Prompt hints: a system-prompt nudge with the everyday triggers (exact
   earlier wording, subagent findings).
 - An `agent.compact.before` layer that adds the same reminder to the
