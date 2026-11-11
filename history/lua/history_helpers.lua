@@ -19,7 +19,7 @@ M.CURRENT_WINDOW = "current"
 M.MAIN_SUB = "main"
 
 M.QUERY_REQUIRED_ERR = "query is required"
-M.WINDOW_ITEM_REQUIRED_ERR = "window and item are required"
+M.ITEM_REQUIRED_ERR = "item is required"
 M.NO_MATCHES_MSG = "no matches"
 M.WINDOW_NOT_FOUND_FMT = "window not found: %s"
 M.ITEM_NOT_FOUND_FMT = "item not found: %s/%s"
@@ -68,6 +68,18 @@ function M.find_window(windows, id)
     end
   end
   return nil
+end
+
+-- A label from list_items or search is "window/item". Accept it whole and
+-- split off the window when the prefix names one. Subagent ids carry a slash
+-- too ("s2/3"), so only a known window id counts as a prefix.
+function M.split_item(windows, item, window_id)
+  local id = tostring(item or "")
+  local prefix, rest = id:match("^([^/]+)/(.+)$")
+  if prefix and M.find_window(windows, prefix) then
+    return prefix, rest
+  end
+  return window_id, id
 end
 
 -- The item list of a window: its messages in order, then each subagent's

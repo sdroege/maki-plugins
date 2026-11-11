@@ -96,10 +96,11 @@ local function cmd_list_items(ctx, windows, input)
 end
 
 local function cmd_read_item(ctx, windows, input)
-  if not input.window or not input.item then
-    return nil, helpers.WINDOW_ITEM_REQUIRED_ERR
+  if not input.item then
+    return nil, helpers.ITEM_REQUIRED_ERR
   end
-  local meta, err = resolve_window(windows, input.window)
+  local window_id, item = helpers.split_item(windows, input.item, input.window)
+  local meta, err = resolve_window(windows, window_id)
   if not meta then
     return nil, err
   end
@@ -107,7 +108,7 @@ local function cmd_read_item(ctx, windows, input)
   if not window then
     return nil, err
   end
-  return helpers.read_item(window.id, helpers.flatten_items(window), input.item, input.offset_chars, input.limit_chars)
+  return helpers.read_item(window.id, helpers.flatten_items(window), item, input.offset_chars, input.limit_chars)
 end
 
 local function cmd_search(ctx, windows, input)
@@ -141,7 +142,7 @@ maki.api.register_tool({
 
 - `list_windows`: id, what sealed it (compaction or rewind), and creation time per window, current first.
 - `list_items [window] [role] [sub] [limit] [max_chars_per_item]`: one line per item, `window/item, role[, sub], preview`. Main-thread items are numbered by position in the window's log, subagent items by their position among the window's subagents and position within their transcript (`s2/3`); both are stable across calls. `sub` filters by thread: "main" or a subagent name (the task description that spawned it).
-- `read_item window item [offset_chars] [limit_chars]`: full render of one item - text, thinking, tool_use (name and input), tool_result (resolved), images as `[image omitted]`.
+- `read_item [window] item [offset_chars] [limit_chars]`: full render of one item - text, thinking, tool_use (name and input), tool_result (resolved), images as `[image omitted]`. `item` may be the whole `window/item` label from `list_items` or `search`; the label names its own window.
 - `search query [window] [role] [sub] [limit]`: literal case-sensitive substring; `window/item, role[, sub], snippet` lines, with `(N matches)` when an item matches more than once.
 
 Windows are `"current"` plus archive ids from `list_windows`; an archive is immutable, sealed by the compaction or rewind that dropped its turns. Pass ids back exactly as returned. Items are ordered by position in the window's log; the in-flight turn appears in the current window once completed. Unknown ids answer a clean not-found, limit-like arguments are clamped, never rejected.]],
@@ -157,11 +158,11 @@ Windows are `"current"` plus archive ids from `list_windows`; an archive is immu
       },
       window = {
         type = "string",
-        description = 'Window id: "current" or an archive id from list_windows.',
+        description = 'Window id: "current" or an archive id from list_windows. Defaults to the current window, or to the window in a "window/item" item.',
       },
       item = {
         type = "string",
-        description = 'Item id from list_items or search: a position like "12" on the main thread, or "s2/3" for subagent 2, item 3. Pass back exactly as returned.',
+        description = 'Item id from list_items or search: a position like "12" on the main thread, "s2/3" for subagent 2, item 3, or the whole "1/12" label. Pass back exactly as returned.',
       },
       offset_chars = {
         type = "integer",

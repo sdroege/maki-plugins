@@ -15,7 +15,8 @@ on disk.
     name, the task description that spawned it).
   - `read_item`: full render of one item - text, thinking, tool_use (name
     and input), tool_result, images as `[image omitted]` - with
-    `offset_chars`/`limit_chars` slicing.
+    `offset_chars`/`limit_chars` slicing. `item` may be the whole
+    `window/item` label from `list_items` or `search`.
   - `search`: literal case-sensitive substring across windows, with snippets
     around each match and a per-item match count when an item matches more
     than once.

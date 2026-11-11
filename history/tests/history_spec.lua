@@ -57,6 +57,23 @@ check("find_window hits", (h.find_window({ w }, "1")).id, "1")
 check_nil("find_window misses", h.find_window({ w }, "2"))
 check_nil("find_window nil list", h.find_window(nil, "1"))
 
+-- split_item
+local windows = { window("current", {}), w }
+local window_id, item = h.split_item(windows, "1/12", nil)
+check("split_item takes the window from the label", window_id, "1")
+check("split_item strips the label prefix", item, "12")
+window_id, item = h.split_item(windows, "1/s1/2", nil)
+check("split_item keeps a subagent id", item, "s1/2")
+window_id, item = h.split_item(windows, "s1/2", "1")
+check("split_item leaves a subagent id alone", window_id, "1")
+check("split_item leaves a subagent id whole", item, "s1/2")
+window_id, item = h.split_item(windows, "12", nil)
+check_nil("split_item without a window", window_id)
+check("split_item keeps a bare id", item, "12")
+window_id, item = h.split_item(windows, "9/12", "1")
+check("split_item ignores an unknown prefix", window_id, "1")
+check("split_item keeps an unknown prefix", item, "9/12")
+
 -- render_message
 check("render text", h.render_message(msg("user", "hello")), "hello")
 check(
