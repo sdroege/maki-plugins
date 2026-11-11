@@ -18,13 +18,13 @@ For cross-session, project-scoped notes use the built-in `memory` tool.
   `notes` as the context window fills, at 40%, 60%, and 80% of the window
   (configurable), with hysteresis: each step fires once per crossing, one
   nudge per event even when a jump crosses several steps.
-- Prompt hints: a system-prompt nudge to save/read notes around compaction,
-  and a compact-prompt hint listing the session's note filenames so the
-  compaction summary tells the model what to read back.
+- Prompt hints: a system-prompt nudge to save/read notes around compaction.
 - An `agent.compact.before` layer that gives every automatic compaction one
   turn of grace: the ask defers with a nudge to save notes, delivered as the
   model's next message, and the ask after it runs with a read-back naming the
-  surviving notes attached to the message the agent resumes with. The host
+  surviving notes attached to the message the agent resumes with. The same
+  verdict adds the note filenames to the compaction summary's instructions,
+  computed at the compaction moment so they are never stale. The host
   caps the defer to one per compaction, so the layer keeps no state. A manual
   `/compact` and an overflow recovery are obeyed at once, only read back. The
   summary alone is passive text the model can skim past; the read-back is a
@@ -41,8 +41,8 @@ Requires maki 0.6.0 or newer.
 > **Note:** this plugin needs maki changes that are not merged upstream yet.
 > Build maki from the [`dev` branch](https://github.com/sdroege/maki/tree/dev)
 > for now. It uses the session-scoped notes directory, the `TurnComplete`
-> autocmd, compact prompt hints, and the `defer` verdict of
-> `agent.compact.before`, which are not in upstream maki yet.
+> autocmd, the session context of prompt hint callbacks, and the `defer`
+> verdict of `agent.compact.before`, which are not merged upstream yet.
 
 Clone the repository and symlink this plugin into maki's package directory:
 

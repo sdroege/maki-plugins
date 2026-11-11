@@ -24,12 +24,11 @@ and subagent transcripts, without touching the session files on disk.
   answer a clean not-found. Limit-like arguments are clamped, never
   rejected, and output goes through maki's per-tool output limits.
 - Prompt hints: a system-prompt nudge with the everyday triggers (exact
-  earlier wording, subagent findings) and a compact-prompt hint that the
-  transcript stays readable, while the summary itself must still stand on
-  its own.
-- An `agent.compact.before` layer that attaches the same reminder to
-  every compaction, so the model reads dropped turns back with `history`
-  instead of redoing work.
+  earlier wording, subagent findings).
+- An `agent.compact.before` layer that adds the same reminder to the
+  summary instructions of every compaction, so the summary knows the
+  transcript stays readable, and attaches the read-back reminder so the
+  model reads dropped turns back with `history` instead of redoing work.
 
 ## Install
 
@@ -37,8 +36,8 @@ Requires maki 0.6.0 or newer.
 
 > **Note:** this plugin needs maki changes that are not merged upstream yet.
 > Build maki from the [`dev` branch](https://github.com/sdroege/maki/tree/dev)
-> for now. It uses `maki.session.transcript` and compact prompt hints, which
-> are not in upstream maki yet.
+> for now. It uses `maki.session.transcript` and the session context of
+> prompt hint callbacks, which are not merged upstream yet.
 
 Clone the repository and symlink this plugin into maki's package directory:
 

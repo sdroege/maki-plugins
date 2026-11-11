@@ -278,23 +278,6 @@ maki.api.register_prompt_hint({
   content = "- Save session state that must survive compaction to **notes**, appending right after each milestone (a passing test, a design decision, a discovered layout). Use **memory** only for knowledge useful in future sessions on this project. Read notes back after a compaction before redoing work.",
 })
 
-maki.api.register_prompt_hint({
-  prompt = "compact",
-  slot = "tool_usage",
-  content = function(ctx)
-    local sid = ctx and ctx.session_id
-    if not sid then
-      return nil
-    end
-    local dir = notes_dir(sid)
-    if not dir then
-      return nil
-    end
-    local paths = list_files(dir, nil)
-    return helpers.compact_hint(paths)
-  end,
-})
-
 local outstanding = {}
 
 -- The reminder's hysteresis state does not survive a restart on its own, so
@@ -332,7 +315,9 @@ end
 -- The last save before a compaction and the read-back after it ride
 -- `agent.compact.before`, which fires inside the run it steers: a subagent
 -- gets the read-back too, but never a defer, its run has no later moment
--- to wait for and the host ignores a defer there. The first automatic ask
+-- to wait for and the host ignores a defer there. The summary instructions
+-- ride the same verdict: the note filenames as of the compaction moment,
+-- never stale from a run-start snapshot. The first automatic ask
 -- buys a turn, but only while the window still has headroom for the wrap-up
 -- (DEFER_MAX_USED_PCT): the defer skips the compaction and hands the model
 -- the nudge as its next message, and the ask after it proceeds with the
@@ -343,9 +328,13 @@ end
 maki.api.set_slot("agent.compact.before", function(prev, value, ctx)
   local dir = notes_dir(ctx.session_id)
   local paths = dir and list_files(dir, nil)
+  local hint = helpers.compact_hint(paths)
   local read_back = helpers.post_compact_text(paths)
-  -- `continue` is one string, so layers share it by appending: assigning it
-  -- would drop whatever an earlier layer put there.
+  -- `instructions` and `continue` are one string each, so layers share them
+  -- by appending: assigning would drop whatever an earlier layer put there.
+  if hint then
+    value.instructions = value.instructions and (value.instructions .. "\n\n" .. hint) or hint
+  end
   if read_back then
     value.continue = value.continue and (value.continue .. "\n\n" .. read_back) or read_back
   end

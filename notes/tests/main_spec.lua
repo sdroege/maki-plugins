@@ -344,14 +344,22 @@ check(
   verdict.defer:find("at most one more tool call", 1, true) ~= nil and verdict.defer:find("no tool calls", 1, true) ~= nil,
   true
 )
-check("read-back rides the same verdict", verdict.continue:find("a.md", 1, true) ~= nil, true)
-check("read-back says read first", verdict.continue:find("before doing any work", 1, true) ~= nil, true)
-check("the layer notifies nobody", #notifications, noted)
+  check("read-back rides the same verdict", verdict.continue:find("a.md", 1, true) ~= nil, true)
+  check("read-back says read first", verdict.continue:find("before doing any work", 1, true) ~= nil, true)
+  check(
+    "summary instructions name the notes",
+    verdict.instructions
+      and verdict.instructions:find("a.md", 1, true) ~= nil
+      and verdict.instructions:find("notes list", 1, true) ~= nil,
+    true
+  )
+  check("the layer notifies nobody", #notifications, noted)
 
 -- A manual /compact and an overflow recovery are obeyed, only read back.
 verdict = compact_before({ reason = "manual", context_size = 60, request_instructions = "tidy up" }, main_ctx)
 check_nil("manual never defers", verdict.defer)
 check("manual reads back", verdict.continue:find("a.md", 1, true) ~= nil, true)
+check("manual summary instructions name the notes", verdict.instructions:find("a.md", 1, true) ~= nil, true)
 verdict = compact_before({ reason = "overflow", context_size = 100 }, main_ctx)
 check_nil("overflow never defers", verdict.defer)
 check("overflow reads back", verdict.continue:find("a.md", 1, true) ~= nil, true)
@@ -379,6 +387,7 @@ local s2_ctx = { session_id = "S2", context_window = 100 }
 verdict = compact_before({ reason = "auto", context_size = 85 }, s2_ctx)
 check("defers without notes too", verdict.defer ~= nil, true)
 check_nil("no read-back without notes", verdict.continue)
+check_nil("no summary instructions without notes", verdict.instructions)
 
 -- Near the window's edge the wrap-up turn cannot fit, so the nudge would
 -- promise a settle the overflow recovery tramples anyway.

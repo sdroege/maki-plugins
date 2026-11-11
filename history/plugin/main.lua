@@ -192,23 +192,22 @@ maki.api.register_prompt_hint({
   content = "- Recall exact earlier wording (user requests, error messages, tool outputs) or check what a subagent found with **history**, which reads the session's full transcript, including dropped pre-compaction windows, instead of re-running tools or guessing.",
 })
 
-maki.api.register_prompt_hint({
-  prompt = "compact",
-  slot = "tool_usage",
-  content = "The pre-compaction transcript stays readable with the history tool. The summary must still stand on its own, but exact details (full outputs, exact wording) can be left to history search and read_item instead of copying them into the summary.",
-})
-
--- The read-back after compaction rides `agent.compact.before`, so it sits
--- behind the summary for every compaction the same way: auto and manual
--- `/compact`, overflow, idle or mid-run. A notify instead rides session
--- activity: one answer late after an auto compaction, a started turn for
--- `/compact` on an idle session. A layer on an agent.* slot costs every
--- permission, which is the price of the uniform placement (plugin.toml).
+-- The summary guidance and the read-back after compaction both ride
+-- `agent.compact.before`, so they sit behind every compaction the same
+-- way: auto and manual `/compact`, overflow, idle or mid-run. A notify
+-- instead rides session activity: one answer late after an auto
+-- compaction, a started turn for `/compact` on an idle session. A layer on
+-- an agent.* slot costs every permission, which is the price of the
+-- uniform placement (plugin.toml).
 maki.api.set_slot("agent.compact.before", function(prev, value, ctx)
+  local instructions =
+    "The pre-compaction transcript stays readable with the history tool. The summary must still stand on its own, but exact details (full outputs, exact wording) can be left to history search and read_item instead of copying them into the summary."
   local own =
     "a compaction dropped the older turns from the context; use the history tool to search or read them back instead of redoing work"
-  -- `continue` is one string, so layers share it by appending: assigning it
-  -- would drop whatever an earlier layer put there.
+  -- `instructions` and `continue` are one string each, so layers share them
+  -- by appending: assigning would drop whatever an earlier layer put there.
+  value.instructions = value.instructions and (value.instructions .. "\n\n" .. instructions)
+    or instructions
   value.continue = value.continue and (value.continue .. "\n\n" .. own) or own
   return prev(value, ctx)
 end)
