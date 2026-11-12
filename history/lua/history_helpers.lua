@@ -181,7 +181,7 @@ function M.format_windows(windows)
       .. "  "
       .. (window.kind or "unknown")
       .. "  "
-      .. os.date("%Y-%m-%d %H:%M", window.created_at or 0)
+      .. (window.created_at and os.date("%Y-%m-%d %H:%M", window.created_at) or "unknown")
   end
   return table.concat(lines, "\n")
 end

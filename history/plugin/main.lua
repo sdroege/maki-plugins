@@ -140,7 +140,7 @@ maki.api.register_tool({
   kind = "read",
   description = [[Read the session's own transcript, including archived windows and subagent transcripts. Use it to recall exact earlier wording (user requests, error messages, tool outputs) instead of guessing or re-running tools, to check what a subagent actually found, and to recover dropped conversation after a compaction.
 
-- `list_windows`: id, what sealed it (compaction or rewind), and creation time per window, current first.
+- `list_windows`: id, what sealed it (compaction or rewind), and creation time per window, newest first.
 - `list_items [window] [role] [sub] [limit] [max_chars_per_item]`: one line per item, `window/item, role[, sub], preview`. Main-thread items are numbered by position in the window's log, subagent items by their position among the window's subagents and position within their transcript (`s2/3`); both are stable across calls. `sub` filters by thread: "main" or a subagent name (the task description that spawned it).
 - `read_item [window] item [offset_chars] [limit_chars]`: full render of one item - text, thinking, tool_use (name and input), tool_result (resolved), images as `[image omitted]`. `item` may be the whole `window/item` label from `list_items` or `search`; the label names its own window.
 - `search query [window] [role] [sub] [limit]`: literal case-sensitive substring; `window/item, role[, sub], snippet` lines, with `(N matches)` when an item matches more than once.

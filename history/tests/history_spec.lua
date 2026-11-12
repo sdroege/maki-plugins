@@ -293,12 +293,13 @@ check(
   "format_windows",
   h.format_windows({
     window("current", {}, {}, "current"),
-    window("1", {}, {}, "compaction"),
     window("2", {}, {}, "rewind"),
+    window("1", {}, {}, "compaction"),
   }),
-  "current  current  " .. zero_date .. "\n1  compaction  " .. zero_date .. "\n2  rewind  " .. zero_date
+  "current  current  " .. zero_date .. "\n2  rewind  " .. zero_date .. "\n1  compaction  " .. zero_date
 )
 check("format_windows unknown kind", h.format_windows({ window("1", {}) }), "1  unknown  " .. zero_date)
+check("format_windows missing date", h.format_windows({ { id = "1", kind = "compaction" } }), "1  compaction  unknown")
 check("format_windows empty", h.format_windows({}), "")
 check("format_windows nil", h.format_windows(nil), "")
 
