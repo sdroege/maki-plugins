@@ -19,15 +19,17 @@ local API_KEY_ENV = "INFERENCE_COOP_API_KEY"
 
 -- Prices are per 1M tokens and are what the co-op pays the provider, not
 -- what a member pays: members get a monthly allowance. Recorded anyway, so
--- maki's cost sums track co-op spend. No provider bills a cache write, so
--- cache_write is 0.0, and an unlisted cache read is 0.0 too - except that a
--- greenpt/* or regolo/* row where the co-op's sources disagree with the
--- provider's own price list (https://docs.greenpt.ai/model-cards,
--- https://regolo.ai/models) follows the provider, storing its EUR list
--- per 1M as-is, since the co-op pays the provider's list price directly and
--- its pages are only a mirror that can lag or have gaps. The regolo rows
--- are the case in point: the co-op's sources carry Regolo's list converted
--- to dollars at 1.16.
+-- maki's cost sums track co-op spend. The rows carry the co-op's own dollar
+-- rates, and where a provider's own price list (GreenPT's at
+-- https://docs.greenpt.ai/model-cards, Regolo's embedded in
+-- https://regolo.ai/models) disagrees, the co-op's sources win: the rows
+-- record what the co-op actually pays and what its spend records show. No
+-- provider bills a cache write, so cache_write is 0.0, and an unlisted cache
+-- read is 0.0 too. The co-op arrives at its dollar rates differently per
+-- provider: greenpt/* rows are GreenPT's EUR list stored unconverted in its
+-- config's dollar fields, so those rows match GreenPT's list by
+-- construction, while regolo/* rows are Regolo's EUR list converted at
+-- 1.16, and the rows record those converted dollar figures.
 -- The gateway forwards to OpenAI-compatible endpoints that reason by
 -- default, and no built-in effort dialect matches that shape (off must send
 -- "none" while "standard" omits the field on off), so no dialect is declared
@@ -95,12 +97,13 @@ local MODELS = {
     -- Replaced PublicAI (removed 2026-10-16; billing never operational) as
     -- the co-op's Apertus provider: same open weights, EU ZDR + renewables.
     -- Context is the co-op's measured 262K; Regolo's catalogue advertises
-    -- 30K input, which the gateway demonstrably exceeds.
+    -- 30K input, which the gateway demonstrably exceeds. Prices are the
+    -- co-op's dollar rates (Regolo's EUR list at 1.16).
     prefixes = { "regolo/apertus-70b" },
     tier = "medium",
     context_window = 262144,
     supports_vision = true,
-    pricing = { input = 1.00, output = 3.40, cache_write = 0.0, cache_read = 0.0 },
+    pricing = { input = 1.16, output = 3.944, cache_write = 0.0, cache_read = 0.0 },
   },
   {
     -- The gateway forces chat_template_kwargs: {enable_thinking: false} for
@@ -110,7 +113,7 @@ local MODELS = {
     tier = "medium",
     context_window = 262144,
     supports_vision = true,
-    pricing = { input = 0.60, output = 3.40, cache_write = 0.0, cache_read = 0.0 },
+    pricing = { input = 0.696, output = 3.944, cache_write = 0.0, cache_read = 0.0 },
   },
   {
     -- Reasons whether asked or not and accepts no "none", so off clamps to

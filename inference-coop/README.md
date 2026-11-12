@@ -78,21 +78,24 @@ so read both before touching a row:
 A row needs both sources behind it: drop it when either drops the model.
 
 A dash for cached input is not always a rate that does not exist, and the
-same goes for any other price that disagrees: for a greenpt/* or regolo/*
-row, the provider's own price list has priority over the co-op's sources,
-because the co-op pays the provider's list price directly - the co-op's
-pages are a mirror that can lag or have gaps. Check the upstream provider's
-own pricing before recording 0.0.
+same goes for any other price that disagrees: when a co-op source and a
+provider's own price list disagree, the co-op's sources win, because the
+rows record what the co-op pays in dollars and that is what its spend
+records show. Check both before recording 0.0.
 
 GreenPT's list is https://docs.greenpt.ai/model-cards; the rule came from
 cached input on greenpt/glm-5.3, where the config listed no cached rate and
 models.md showed a dash while GreenPT billed 0.275 (both co-op sources list
-the rate now and agree with the row). Regolo's is the per-token catalogue
-embedded in https://regolo.ai/models, plus its rate announcements at
-https://regolo.ai/pricing-update/: the co-op's sources carry Regolo's EUR
-list converted to dollars at 1.16, and the rows record the list itself
-(apertus-70b 1.00/3.40, qwen3.5-122b 0.60/3.40, Regolo's rates since
-2026-11-01).
+the rate now and agree with the row). The co-op arrives at its dollar rates
+differently per provider: greenpt/* rows are GreenPT's EUR list stored
+unconverted in the config's dollar fields, so they match GreenPT's list by
+construction, while regolo/* rows are Regolo's EUR list converted at 1.16 -
+the rows record those converted dollar figures (apertus-70b 1.16/3.944,
+qwen3.5-122b 0.696/3.944), since the conversion is what the co-op actually
+pays. Regolo's own list is the per-token catalogue embedded in
+https://regolo.ai/models (a `regolo_model_list` JSON blob in the page HTML;
+the visible pricing table mirrors it), plus its rate announcements at
+https://regolo.ai/pricing-update/.
 
 The upstream lists settle prices only: which models are rows still comes
 from the co-op's docs, since Regolo serves many models the co-op does not.
