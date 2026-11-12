@@ -103,19 +103,12 @@ maki.provider.register({
   display_name = "GreenPT",
   codec = "openai",
   base_url = "https://api.greenpt.ai/v1",
+  api_key_env = API_KEY_ENV,
   -- No provider-wide output cap: a row that states none sends no
   -- max_tokens and the API's own limit applies. minimax-m3 keeps the
   -- 65536 its model card declares.
   max_output_tokens = false,
   models = MODELS,
-
-  auth = function()
-    local key = maki.uv.os_getenv(API_KEY_ENV)
-    if not key or key == "" then
-      return nil, "set " .. API_KEY_ENV .. " to use greenpt"
-    end
-    return { headers = { Authorization = "Bearer " .. key } }
-  end,
 
   -- /models also lists embedding, speech and rerank model ids. Anything the
   -- table does not list is filtered out as we can't know from the models list
