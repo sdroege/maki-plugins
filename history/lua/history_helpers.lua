@@ -72,11 +72,12 @@ end
 
 -- A label from list_items or search is "window/item". Accept it whole and
 -- split off the window when the prefix names one. Subagent ids carry a slash
--- too ("s2/3"), so only a known window id counts as a prefix.
+-- too ("s2/3"), so a non-numeric prefix is an item; a numeric one is a window
+-- even when it names none, so the error says which window is missing.
 function M.split_item(windows, item, window_id)
   local id = tostring(item or "")
   local prefix, rest = id:match("^([^/]+)/(.+)$")
-  if prefix and M.find_window(windows, prefix) then
+  if prefix and (M.find_window(windows, prefix) or prefix:match("^%d+$")) then
     return prefix, rest
   end
   return window_id, id

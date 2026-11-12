@@ -71,8 +71,8 @@ window_id, item = h.split_item(windows, "12", nil)
 check_nil("split_item without a window", window_id)
 check("split_item keeps a bare id", item, "12")
 window_id, item = h.split_item(windows, "9/12", "1")
-check("split_item ignores an unknown prefix", window_id, "1")
-check("split_item keeps an unknown prefix", item, "9/12")
+check("split_item takes an unknown numeric window", window_id, "9")
+check("split_item strips an unknown numeric window", item, "12")
 
 -- render_message
 check("render text", h.render_message(msg("user", "hello")), "hello")
