@@ -180,12 +180,12 @@ local function fire(event, data)
   end
 end
 
-local function turncomplete(sid, size, window, task_id)
+local function turncomplete(sid, size, window, id)
   fire("TurnComplete", {
     session_id = sid,
     context_size = size,
     context_window = window,
-    task_id = task_id,
+    id = id,
   })
 end
 

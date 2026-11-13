@@ -363,7 +363,7 @@ maki.api.create_autocmd({ "TurnComplete", "CompactionDone", "SessionEnd" }, {
     end
     -- A subagent's TurnComplete carries its own gauge; its save and read-back
     -- are the compact.before layer's business, not the steps'.
-    if ev.data.task_id then
+    if ev.data.id then
       return
     end
     -- Seed the in-memory state from the marker: a restart or a session switch
