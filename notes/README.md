@@ -38,11 +38,9 @@ For cross-session, project-scoped notes use the built-in `memory` tool.
 
 Requires maki 0.6.0 or newer.
 
-> **Note:** this plugin needs maki changes that are not merged upstream yet.
-> Build maki from the [`dev` branch](https://github.com/sdroege/maki/tree/dev)
-> for now. It uses the session-scoped notes directory, the `TurnComplete`
-> autocmd, the session context of prompt hint callbacks, and the `defer`
-> verdict of `agent.compact.before`, which are not merged upstream yet.
+> **Note:** the `defer` verdict of `agent.compact.before` is not merged
+> upstream yet. Build maki from the [`dev` branch](https://github.com/sdroege/maki/tree/dev)
+> for now; everything else this plugin uses is upstream.
 
 Clone the repository and symlink this plugin into maki's package directory:
 

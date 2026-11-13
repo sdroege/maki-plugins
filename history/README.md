@@ -37,12 +37,6 @@ on disk.
 
 Requires maki 0.6.0 or newer.
 
-> **Note:** this plugin needs maki changes that are not merged upstream yet.
-> Build maki from the [`dev` branch](https://github.com/sdroege/maki/tree/dev)
-> for now. It uses `maki.session.windows`, `maki.session.messages` and
-> `maki.session.subagents`, and the session context of prompt hint callbacks,
-> which are not merged upstream yet.
-
 Clone the repository and symlink this plugin into maki's package directory:
 
 ```sh
