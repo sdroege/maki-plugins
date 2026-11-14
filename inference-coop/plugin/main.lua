@@ -116,6 +116,26 @@ local MODELS = {
     pricing = { input = 0.696, output = 3.944, cache_write = 0.0, cache_read = 0.0 },
   },
   {
+    -- Added 2026-11-13. Hybrid instruct + reasoning Small 4 (119B) with
+    -- vision and tool calling. Context is the co-op's measured 262K; the
+    -- LiteLLM config still declares Regolo's catalogued 60K, which the
+    -- gateway demonstrably exceeds (docs commit 808e5450, 2026-11-13).
+    prefixes = { "regolo/mistral-small-4-119b" },
+    tier = "medium",
+    context_window = 262144,
+    supports_vision = true,
+    pricing = { input = 0.20, output = 0.70, cache_write = 0.0, cache_read = 0.0 },
+  },
+  {
+    -- Added 2026-11-13. Dense multimodal Gemma 4 (31B) with native function
+    -- calling. Context is the co-op's measured 262K, not the config's 100K.
+    prefixes = { "regolo/gemma4-31b" },
+    tier = "medium",
+    context_window = 262144,
+    supports_vision = true,
+    pricing = { input = 0.40, output = 0.60, cache_write = 0.0, cache_read = 0.0 },
+  },
+  {
     -- Reasons whether asked or not and accepts no "none", so off clamps to
     -- low, the lowest rung of its ladder.
     prefixes = { "tinfoil/gpt-oss-120b" },
