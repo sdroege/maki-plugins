@@ -279,6 +279,8 @@ maki.api.register_prompt_hint({
 })
 
 local outstanding = {}
+-- Keyed by task id; a subagent's state dies with the session that opened it.
+local subagent_outstanding = {}
 
 -- The reminder's hysteresis state does not survive a restart on its own, so
 -- every fired nudge also plants a marker file holding the nudged step: a
@@ -347,42 +349,63 @@ end)
 
 maki.api.create_autocmd({ "TurnComplete", "CompactionDone", "SessionEnd" }, {
   callback = function(ev)
-    local sid = ev.data and ev.data.session_id
+    local data = ev.data
+    local sid = data and data.session_id
     if not sid then
       return
     end
-    if ev.event ~= "TurnComplete" then
+    if ev.event == "SessionEnd" then
       outstanding[sid] = nil
-      if ev.event == "CompactionDone" then
-        marker_clear(sid)
+      for task_id, entry in pairs(subagent_outstanding) do
+        if entry.session == sid then
+          subagent_outstanding[task_id] = nil
+        end
       end
       return
     end
-    -- A subagent's TurnComplete carries its own gauge; its save and read-back
-    -- are the compact.before layer's business, not the steps'.
-    if ev.data.id then
+    if ev.event == "CompactionDone" then
+      outstanding[sid] = nil
+      marker_clear(sid)
       return
     end
-    -- Seed the in-memory state from the marker: a restart or a session switch
-    -- wiped it, and the marker records which steps were already nudged.
-    if outstanding[sid] == nil then
-      local full = marker_path(sid)
-      local content = full and maki.fs.read(full)
-      outstanding[sid] = content and helpers.state_from_marker(content, helpers.remind_steps()) or 0
-    end
     local steps = helpers.remind_steps()
-    local step, state = helpers.should_remind(outstanding[sid], ev.data.context_size, ev.data.context_window, steps)
-    outstanding[sid] = state
-    -- The marker always mirrors the current state, not just fired nudges, so
-    -- a restart seeds exactly the steps that are re-armed right now.
-    if state > 0 then
-      marker_set(sid, tostring(steps[state]))
+    local task_id = data.id
+    local state
+    if task_id then
+      local entry = subagent_outstanding[task_id]
+      state = entry and entry.state or 0
     else
-      marker_clear(sid)
+      -- Seed the in-memory state from the marker: a restart or a session
+      -- switch wiped it, and the marker records which steps were already
+      -- nudged.
+      if outstanding[sid] == nil then
+        local full = marker_path(sid)
+        local content = full and maki.fs.read(full)
+        outstanding[sid] = content and helpers.state_from_marker(content, steps) or 0
+      end
+      state = outstanding[sid]
+    end
+    local step, next_state = helpers.should_remind(state, data.context_size, data.context_window, steps)
+    if task_id then
+      -- A subagent does not outlive its run, so its state needs no marker.
+      if next_state > 0 then
+        subagent_outstanding[task_id] = { session = sid, state = next_state }
+      else
+        subagent_outstanding[task_id] = nil
+      end
+    else
+      outstanding[sid] = next_state
+      -- The marker always mirrors the current state, not just fired nudges, so
+      -- a restart seeds exactly the steps that are re-armed right now.
+      if next_state > 0 then
+        marker_set(sid, tostring(steps[next_state]))
+      else
+        marker_clear(sid)
+      end
     end
     if step then
-      local text = helpers.reminder_text(ev.data.context_size, ev.data.context_window, step)
-      maki.session.notify(text, { session = sid, wake = true, display = text })
+      local text = helpers.reminder_text(data.context_size, data.context_window, step)
+      maki.session.notify(text, { session = sid, task = task_id, wake = true, display = text })
     end
   end,
 })

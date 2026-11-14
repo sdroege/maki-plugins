@@ -17,7 +17,9 @@ For cross-session, project-scoped notes use the built-in `memory` tool.
 - A `TurnComplete` listener that nudges the model to save important state to
   `notes` as the context window fills, at 40%, 60%, and 80% of the window
   (configurable), with hysteresis: each step fires once per crossing, one
-  nudge per event even when a jump crosses several steps.
+  nudge per event even when a jump crosses several steps. Subagents are
+  nudged too, addressed by the task id their events carry, and their state
+  dies with the session that opened them.
 - Prompt hints: a system-prompt nudge to save/read notes around compaction.
 - An `agent.compact.before` layer that gives every automatic compaction one
   turn: the ask defers with a nudge to save notes, delivered as the model's
@@ -38,9 +40,10 @@ For cross-session, project-scoped notes use the built-in `memory` tool.
 
 Requires maki 0.7.2 or newer.
 
-> **Note:** the `defer` verdict of `agent.compact.before` is not merged
-> upstream yet. Build maki from the [`dev` branch](https://github.com/sdroege/maki/tree/dev)
-> for now; everything else this plugin uses is upstream.
+> **Note:** the `defer` verdict of `agent.compact.before` and the `task`
+> option of `maki.session.notify` are not merged upstream yet. Build maki from
+> the [`dev` branch](https://github.com/sdroege/maki/tree/dev) for now;
+> everything else this plugin uses is upstream.
 
 Clone the repository and symlink this plugin into maki's package directory:
 
