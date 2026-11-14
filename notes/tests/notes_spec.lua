@@ -76,7 +76,7 @@ check("cap leaves small output", h.cap_read_output("small"), "small")
 check(
   "cap kicks in",
   h.cap_read_output(big):sub(h.MAX_READ_BYTES + 1),
-  "\n... (output truncated at " .. h.MAX_READ_BYTES .. " bytes; " .. h.CAP_READ_HINT .. ")"
+  "\n... (output truncated at " .. h.MAX_READ_BYTES .. " bytes. " .. h.CAP_READ_HINT .. ")"
 )
 local split_safe = "a" .. ("é"):rep(h.MAX_READ_BYTES / 2 + 1)
 local capped = h.cap_read_output(split_safe)
@@ -233,7 +233,7 @@ check(
   h.post_compact_text({ "a.md", "b.md" }),
   "Compaction just replaced this session's history with a summary, which can miss details. "
     .. "Notes still saved: a.md, b.md. Read the relevant ones with the `notes` tool before doing any work "
-    .. "(e.g. `notes read <path>`; `notes list` shows them all), then continue the task."
+    .. "(e.g. `notes read <path>`, or `notes list` to see them all), then continue the task."
 )
 local many2 = {}
 for i = 1, h.HINT_LIST_CAP + 3 do

@@ -159,18 +159,18 @@ end
 
 maki.api.register_tool({
   name = "notes",
-  description = [[Persistent, session-scoped notes for state that must survive compaction. Use this for anything that only matters in this session: task progress, intermediate results, file offsets, decisions, gotchas. Use the built-in memory tool only for knowledge useful in future sessions on this project; per-session state there pollutes every later session.
+  description = [[Persistent, session-scoped notes for state that must survive compaction. Use this for anything that only matters in this session: task progress, intermediate results, file offsets, decisions, gotchas. Use the built-in memory tool only for knowledge useful in future sessions on this project. Per-session state there pollutes every later session.
 
 Files live under the session's notes dir and are deleted with the session.
 
 - Strongly consistent: a read sees every earlier append/write immediately.
 - `list [prefix] [limit]`: note paths with size and mtime.
 - `read path [start_line] [stop_line]`: whole file, or a 1-based inclusive line range.
-- `search query [prefix] [max_files] [max_matches_per_file]`: literal case-sensitive substring; `path:line: text` lines.
-- `append path text`: append verbatim; creates the file and parent dirs. Concurrent appends interleave.
-- `write path text`: create or replace; last writer wins.
+- `search query [prefix] [max_files] [max_matches_per_file]`: literal case-sensitive substring, reported as `path:line: text` lines.
+- `append path text`: append verbatim, creating the file and parent dirs. Concurrent appends interleave.
+- `write path text`: create or replace (last writer wins).
 
-Paths are relative with no empty, '.', or '..' components, at most 8 levels deep; '~' is a literal name, never expanded. Limit-like args are clamped, never rejected. Each note is capped at 1 MiB; start another file when one is full. There is no delete: the user removes notes via the /notes picker. Pass paths back exactly as list/search returned them.]],
+Paths are relative with no empty, '.', or '..' components, at most 8 levels deep. '~' is a literal name, never expanded. Limit-like args are clamped, never rejected. Each note is capped at 1 MiB, so start another file when one is full. There is no delete: the user removes notes via the /notes picker. Pass paths back exactly as list/search returned them.]],
 
   schema = {
     type = "object",

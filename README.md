@@ -18,7 +18,7 @@ manifest, and its own README.
 
 `notes` needs a maki change that is not merged upstream yet (the `defer`
 verdict of `agent.compact.before`). Build maki from the [`dev` branch](https://github.com/sdroege/maki/tree/dev)
-for it; `history` works with released maki 0.7.2.
+for it. `history` works with released maki 0.7.2.
 
 ### bash-filter
 
@@ -58,7 +58,7 @@ windows, vision support and the co-op's recorded costs. Set
 ### notes
 
 Session-scoped notes that survive compaction and session resume. The `notes`
-tool supports `list`, `read`, `search`, `append` and `write`; `/notes` opens a
+tool supports `list`, `read`, `search`, `append` and `write`. `/notes` opens a
 picker over the current session's notes. The plugin also nudges the model to
 save state at configurable fractions of the context window, holds an automatic
 compaction until its save lands, and names the surviving notes when the
@@ -70,7 +70,7 @@ Adds a local Strata server as a provider. Strata serves one model at a time on
 `127.0.0.1:8080`, so the plugin lists exactly what `GET /v1/models` reports,
 including the live context window and vision support. Pricing is a real zero
 and no API key is needed. maki's private-address guard must allow
-`127.0.0.1:8080` for the live model list; see the
+`127.0.0.1:8080` for the live model list. See the
 [plugin README](strata/README.md).
 
 ## Install
@@ -91,8 +91,8 @@ ln -s ~/src/maki-plugins/notes ~/.local/share/maki/site/pack/local/start/notes
 ```
 
 Copying a directory works the same way. `maki.pack.add` installs the root of a
-Git repository, not a subdirectory, so it does not work with this monorepo;
-use a symlink or a copy for the individual plugins.
+Git repository, not a subdirectory, so it does not work with this monorepo.
+Use a symlink or a copy for the individual plugins.
 
 Restart maki or run `/reload` after adding a package. A hand-placed package is
 trusted like your own `init.lua` and receives exactly the permissions its
@@ -120,6 +120,6 @@ sh bash-filter/tests/run.sh
 
 `bash-filter` tests parse real shell commands with the tree-sitter bash
 grammar. If `bash-filter/tests/lib/libtree-sitter-bash.so` is missing, build
-it first with `sh bash-filter/tests/lib/build.sh`; that needs the
+it first with `sh bash-filter/tests/lib/build.sh`. That needs the
 `tree-sitter-bash` crate in the cargo registry and the system
 `libtree-sitter`. The provider plugins have no automated tests.

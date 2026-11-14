@@ -15,7 +15,7 @@ M.MAX_PATH_DEPTH = 8
 M.HINT_LIST_CAP = 50
 M.DEFAULT_REMIND_STEPS = { 0.4, 0.6, 0.8 }
 
-M.NO_NOTES_MSG = "no notes in this session yet; use write to create one"
+M.NO_NOTES_MSG = "no notes in this session yet: use write to create one"
 M.NO_MATCHES_MSG = "no notes match the query"
 M.PATH_REQUIRED_ERR = "path is required"
 M.PATH_ABSOLUTE_ERR = "path must be relative"
@@ -23,11 +23,11 @@ M.PATH_INVALID_ERR = "path must not contain empty, '.', or '..' components"
 M.PATH_TOO_DEEP_FMT = "path is too deep (max %d components)"
 M.TEXT_REQUIRED_ERR = "text is required"
 M.QUERY_REQUIRED_ERR = "query is required"
-M.TOO_BIG_FMT = "note would exceed the %d byte per-file cap; start another note file"
-M.CAP_READ_HINT = "narrow the range with start_line/stop_line, or read a smaller note"
-M.CAP_READ_FMT = "... (output truncated at %d bytes; " .. M.CAP_READ_HINT .. ")"
-M.CAP_READ_TOTAL_FMT = "... (output truncated at %d bytes; %d lines total; " .. M.CAP_READ_HINT .. ")"
-M.SCAN_CAPPED_FMT = "... (searched the first %d of %d files; narrow with a prefix)"
+M.TOO_BIG_FMT = "note would exceed the %d byte per-file cap: start another note file"
+M.CAP_READ_HINT = "Narrow the range with start_line/stop_line, or read a smaller note"
+M.CAP_READ_FMT = "... (output truncated at %d bytes. " .. M.CAP_READ_HINT .. ")"
+M.CAP_READ_TOTAL_FMT = "... (output truncated at %d bytes, %d lines total. " .. M.CAP_READ_HINT .. ")"
+M.SCAN_CAPPED_FMT = "... (searched the first %d of %d files. Narrow with a prefix)"
 
 local config = { remind_steps = M.DEFAULT_REMIND_STEPS, reminder_text = nil }
 
@@ -94,7 +94,7 @@ function M.defer_text(context_size, context_window)
     return config.reminder_text
   end
   local pct = math.floor(context_size / context_window * 100 + 0.5)
-  return ("automatic compaction is paused (%d%% of the window): save any session state you need to keep to notes now, in this turn; compaction runs automatically after this turn and drops unsaved state"):format(
+  return ("automatic compaction is paused (%d%% of the window): save any session state you need to keep to notes now, in this turn. Compaction runs automatically after this turn and drops unsaved state"):format(
     pct
   )
 end
@@ -362,7 +362,7 @@ function M.post_compact_text(paths)
     .. table.concat(names, ", ")
     .. suffix
     .. ". Read the relevant ones with the `notes` tool before doing any work "
-    .. "(e.g. `notes read <path>`; `notes list` shows them all), then continue the task."
+    .. "(e.g. `notes read <path>`, or `notes list` to see them all), then continue the task."
 end
 
 return M

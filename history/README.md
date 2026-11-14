@@ -11,7 +11,7 @@ on disk.
   - `list_windows`: id, what sealed the window (compaction or rewind), and
     creation time per window, current first.
   - `list_items`: one line per item with a `window/item` id the model chains
-    into `read_item`; filter by `role` and `sub` (`"main"` or a subagent
+    into `read_item`. Filter by `role` and `sub` (`"main"` or a subagent
     name, the task description that spawned it).
   - `read_item`: full render of one item - text, thinking, tool_use (name
     and input), tool_result, images as `[image omitted]` - with
@@ -21,8 +21,8 @@ on disk.
     around each match and a per-item match count when an item matches more
     than once.
 - Main-thread items are numbered by position in the window's log, subagent
-  items by their position among the window's subagents and position within
-  their transcript (`s2/3`), so ids stay valid as the transcript grows.
+  items by their subagent index and position in their transcript (`s2/3`), so
+  ids stay valid as the transcript grows.
   Archives are immutable. Unknown ids answer a clean not-found. Limit-like
   arguments are clamped, never rejected, and output goes through maki's
   per-tool output limits.

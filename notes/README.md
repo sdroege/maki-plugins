@@ -29,7 +29,7 @@ For cross-session, project-scoped notes use the built-in `memory` tool.
   computed at the compaction moment so they are never stale. The host caps
   the defer to one per compaction, so the layer keeps no state. A manual
   `/compact` and an overflow recovery are obeyed at once, only read back. The
-  summary alone is passive text the model can skim past; the read-back is a
+  summary alone is passive text the model can skim past. The read-back is a
   fresh message that names the files, which is what makes it actually happen.
   Subagent runs ride the same hook, so the save turn and read-back work
   without ever addressing them.
@@ -42,8 +42,8 @@ Requires maki 0.7.2 or newer.
 
 > **Note:** the `defer` verdict of `agent.compact.before` and the `task`
 > option of `maki.session.notify` are not merged upstream yet. Build maki from
-> the [`dev` branch](https://github.com/sdroege/maki/tree/dev) for now;
-> everything else this plugin uses is upstream.
+> the [`dev` branch](https://github.com/sdroege/maki/tree/dev) for now.
+> Everything else this plugin uses is upstream.
 
 Clone the repository and symlink this plugin into maki's package directory:
 
@@ -79,10 +79,10 @@ the middle ones to update, the last to save before compaction.
 The manifest asks for every permission, because the `agent.compact.before`
 layer steers what the agent does next and every `agent.*` slot costs all
 of them: a plugin missing one gets its layer skipped. What the plugin
-actually uses is narrower: `fs_read` and `fs_write`, for the session's own
-notes dir and the `/notes` picker; `agent` and `session_write`, so the
-reminders can wake the session with a `notify` observation; `session_read`,
-so the `TurnComplete` subscription arrives whole instead of stripped to its
+actually uses is narrower: `fs_read` and `fs_write` for the session's own
+notes dir and the `/notes` picker. `agent` and `session_write` let the
+reminders wake the session with a `notify` observation, and `session_read`
+keeps the `TurnComplete` subscription whole instead of stripped to its
 metadata.
 
 ## Tests

@@ -83,7 +83,7 @@ provider's own price list disagree, the co-op's sources win, because the
 rows record what the co-op pays in dollars and that is what its spend
 records show. Check both before recording 0.0.
 
-GreenPT's list is https://docs.greenpt.ai/model-cards; the rule came from
+GreenPT's list is https://docs.greenpt.ai/model-cards. The rule came from
 cached input on greenpt/glm-5.3, where the config listed no cached rate and
 models.md showed a dash while GreenPT billed 0.275 (both co-op sources list
 the rate now and agree with the row). The co-op arrives at its dollar rates
@@ -93,8 +93,8 @@ construction, while regolo/* rows are Regolo's EUR list converted at 1.16 -
 the rows record those converted dollar figures (apertus-70b 1.16/3.944,
 qwen3.5-122b 0.696/3.944), since the conversion is what the co-op actually
 pays. Regolo's own list is the per-token catalogue embedded in
-https://regolo.ai/models (a `regolo_model_list` JSON blob in the page HTML;
-the visible pricing table mirrors it), plus its rate announcements at
+https://regolo.ai/models (a `regolo_model_list` JSON blob in the page HTML,
+mirrored by the visible pricing table), plus its rate announcements at
 https://regolo.ai/pricing-update/.
 
 The upstream lists settle prices only: which models are rows still comes

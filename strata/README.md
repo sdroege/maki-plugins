@@ -66,7 +66,7 @@ maki.setup({
 ```
 
 Chat requests go to the declared origin unguarded, so without this the model
-still runs; only the live listing is empty.
+still runs and only the live listing is empty.
 
 ## Permissions
 

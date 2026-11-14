@@ -350,7 +350,7 @@ check(
 check("nudge names the fill", verdict.defer:find("85% of the window", 1, true) ~= nil, true)
 check(
   "nudge puts the compaction after this turn",
-  verdict.defer:find("compaction runs automatically after this turn", 1, true) ~= nil,
+  verdict.defer:find("Compaction runs automatically after this turn", 1, true) ~= nil,
   true
 )
 check(

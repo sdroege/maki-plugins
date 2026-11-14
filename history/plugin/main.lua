@@ -141,11 +141,11 @@ maki.api.register_tool({
   description = [[Read the session's own transcript, including archived windows and subagent transcripts. Use it to recall exact earlier wording (user requests, error messages, tool outputs) instead of guessing or re-running tools, to check what a subagent actually found, and to recover dropped conversation after a compaction.
 
 - `list_windows`: id, what sealed it (compaction or rewind), and creation time per window, newest first.
-- `list_items [window] [role] [sub] [limit] [max_chars_per_item]`: one line per item, `window/item, role[, sub], preview`. Main-thread items are numbered by position in the window's log, subagent items by their position among the window's subagents and position within their transcript (`s2/3`); both are stable across calls. `sub` filters by thread: "main" or a subagent name (the task description that spawned it).
-- `read_item [window] item [offset_chars] [limit_chars]`: full render of one item - text, thinking, tool_use (name and input), tool_result (resolved), images as `[image omitted]`. `item` may be the whole `window/item` label from `list_items` or `search`; the label names its own window.
-- `search query [window] [role] [sub] [limit]`: literal case-sensitive substring; `window/item, role[, sub], snippet` lines, with `(N matches)` when an item matches more than once.
+- `list_items [window] [role] [sub] [limit] [max_chars_per_item]`: one line per item, `window/item, role[, sub], preview`. Main-thread items are numbered by position in the window's log, subagent items by their subagent index and position in their transcript (`s2/3`), stable across calls. `sub` filters by thread: "main" or a subagent name (the task description that spawned it).
+- `read_item [window] item [offset_chars] [limit_chars]`: full render of one item - text, thinking, tool_use (name and input), tool_result (resolved), images as `[image omitted]`. `item` may be the whole `window/item` label from `list_items` or `search`, which names its own window.
+- `search query [window] [role] [sub] [limit]`: literal case-sensitive substring, reported as `window/item, role[, sub], snippet` lines, with `(N matches)` when an item matches more than once.
 
-Windows are `"current"` plus archive ids from `list_windows`; an archive is immutable, sealed by the compaction or rewind that dropped its turns. Pass ids back exactly as returned. Items are ordered by position in the window's log; the in-flight turn appears in the current window once completed. Unknown ids answer a clean not-found, limit-like arguments are clamped, never rejected.]],
+Windows are `"current"` plus archive ids from `list_windows`. An archive is immutable, sealed by the compaction or rewind that dropped its turns. Pass ids back exactly as returned. Items are ordered by position in the window's log, and the in-flight turn appears in the current window once completed. Unknown ids answer a clean not-found, limit-like arguments are clamped, never rejected.]],
 
   schema = {
     type = "object",
@@ -260,7 +260,7 @@ maki.api.set_slot("agent.compact.before", function(prev, value, ctx)
   local instructions =
     "The archived transcript stays readable with the history tool. The summary must still stand on its own, but exact details (full outputs, exact wording) can be left to history search and read_item instead of copying them into the summary."
   local own =
-    "a compaction dropped the older turns from the context; use the history tool to search or read them back instead of redoing work"
+    "a compaction dropped the older turns from the context. Use the history tool to search or read them back instead of redoing work"
   -- `instructions` and `continue` are one string each, so layers share them
   -- by appending: assigning would drop whatever an earlier layer put there.
   value.instructions = value.instructions and (value.instructions .. "\n\n" .. instructions)
