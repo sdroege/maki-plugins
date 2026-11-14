@@ -187,6 +187,11 @@ check(
   h.reminder_text(83, 100, 0.8),
   "context is nearly full (83% of the window): save important session state to notes now, before a compaction drops it"
 )
+check(
+  "compact step text",
+  h.reminder_text(87, 100, 0.85),
+  "context is 87% full: save what matters to notes, then call compact at your next task boundary"
+)
 
 -- state_from_marker
 check("marker state for legacy marker", h.state_from_marker("1", steps), 3)
@@ -196,7 +201,7 @@ check("marker state below all steps", h.state_from_marker("0.1", steps), 0)
 check("marker state for garbage", h.state_from_marker("junk", steps), 3)
 
 -- setup
-check("default steps", table.concat(h.remind_steps(), ","), "0.4,0.6,0.8")
+check("default steps", table.concat(h.remind_steps(), ","), "0.4,0.6,0.8,0.85")
 h.setup({ remind_at = 0.9, reminder_text = "custom" })
 check("single fraction becomes one step", table.concat(h.remind_steps(), ","), "0.9")
 check("custom reminder text", h.reminder_text(95, 100), "custom")

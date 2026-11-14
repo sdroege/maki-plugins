@@ -13,11 +13,12 @@ manifest, and its own README.
 | [`greenpt`](greenpt/) | The `greenpt` provider, with a curated model table for GreenPT's OpenAI-compatible API. | maki 0.6.0 |
 | [`history`](history/) | A `history` tool that lets the model read its own transcript, including archived pre-compaction windows and subagent transcripts. | maki 0.7.2 |
 | [`inference-coop`](inference-coop/) | The `inference-coop` provider, a member-governed gateway in front of Tinfoil, GreenPT and Regolo. | maki 0.6.0 |
-| [`notes`](notes/) | A session-scoped `notes` tool plus a `/notes` picker, with reminders as the context window fills and a read-back after compaction. | maki `dev` (0.7.2 + unmerged) |
+| [`notes`](notes/) | A session-scoped `notes` tool and a `compact` tool, plus a `/notes` picker, reminders as the context window fills, and a read-back after compaction. | maki `dev` (0.7.2 + unmerged) |
 | [`strata`](strata/) | The `strata` provider for a local Strata server, listing whatever model the server reports. | maki 0.6.0 |
 
-`notes` needs a maki change that is not merged upstream yet (the `defer`
-verdict of `agent.compact.before`). Build maki from the [`dev` branch](https://github.com/sdroege/maki/tree/dev)
+`notes` needs maki changes that are not merged upstream yet (the `defer`
+verdict of `agent.compact.before`, the `task` option of `maki.session.notify`, and
+`maki.session.request_compact`). Build maki from the [`dev` branch](https://github.com/sdroege/maki/tree/dev)
 for it. `history` works with released maki 0.7.2.
 
 ### bash-filter
@@ -62,7 +63,9 @@ tool supports `list`, `read`, `search`, `append` and `write`. `/notes` opens a
 picker over the current session's notes. The plugin also nudges the model to
 save state at configurable fractions of the context window, holds an automatic
 compaction until its save lands, and names the surviving notes when the
-compaction runs. For cross-session notes, use maki's built-in `memory` tool.
+compaction runs. A `compact` tool lets the model end the window itself at a
+task boundary, and the last reminder step asks for it. For cross-session
+notes, use maki's built-in `memory` tool.
 
 ### strata
 

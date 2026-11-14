@@ -229,81 +229,86 @@ check("second step notifies", #notifications, 2)
 check("second step text", notifications[2].text:find("65% full", 1, true) ~= nil, true)
 check("marker holds second step", disk.files[marker("S1")], "0.6")
 
--- A jump over several steps fires only the highest.
+-- The last save step keeps its urgency, and a jump over several steps
+-- fires only the highest: the compact ask replaces the save ask.
+turncomplete("S1", 83, 100)
+check("last save step notifies", #notifications, 3)
+check("nearly full text", notifications[3].text:find("nearly full", 1, true) ~= nil, true)
+check("marker holds last save step", disk.files[marker("S1")], "0.8")
 turncomplete("S1", 90, 100)
-check("jump notifies top only", #notifications, 3)
-check("top step text", notifications[3].text:find("nearly full", 1, true) ~= nil, true)
-check("marker holds top step", disk.files[marker("S1")], "0.8")
+check("jump notifies compact step", #notifications, 4)
+check("compact step text", notifications[4].text:find("call compact", 1, true) ~= nil, true)
+check("marker holds compact step", disk.files[marker("S1")], "0.85")
 
 -- Hysteresis: quiet while the crossing stays outstanding.
 turncomplete("S1", 92, 100)
-check("quiet while outstanding", #notifications, 3)
+check("quiet while outstanding", #notifications, 4)
 
 -- A subagent's TurnComplete carries its own gauge and task id, so the nudge
 -- goes to that subagent and leaves the parent's state and marker alone.
 turncomplete("S9", 55, 100, "T1")
-check("subagent first step notifies", #notifications, 4)
-check("subagent nudge targets the task", notifications[4].opts.task, "T1")
-check("subagent nudge targets the session", notifications[4].opts.session, "S9")
-check("subagent nudge wakes", notifications[4].opts.wake, true)
+check("subagent first step notifies", #notifications, 5)
+check("subagent nudge targets the task", notifications[5].opts.task, "T1")
+check("subagent nudge targets the session", notifications[5].opts.session, "S9")
+check("subagent nudge wakes", notifications[5].opts.wake, true)
 check_nil("subagent leaves no marker", disk.files[marker("S9")])
 turncomplete("S9", 59, 100, "T1")
-check("subagent hysteresis holds", #notifications, 4)
+check("subagent hysteresis holds", #notifications, 5)
 turncomplete("S9", 99, 100, "T1")
-check("subagent top step notifies", #notifications, 5)
-check("subagent top text", notifications[5].text:find("nearly full", 1, true) ~= nil, true)
+check("subagent top step notifies", #notifications, 6)
+check("subagent top text", notifications[6].text:find("call compact", 1, true) ~= nil, true)
 turncomplete("S9", 99, 100, "T1")
-check("subagent stays quiet at the top", #notifications, 5)
+check("subagent stays quiet at the top", #notifications, 6)
 
 -- SessionEnd drops the subagent's state with the session that opened it.
 fire("SessionEnd", { session_id = "S9" })
 turncomplete("S9", 42, 100, "T1")
-check("subagent state dies with the session", #notifications, 6)
+check("subagent state dies with the session", #notifications, 7)
 
 -- Falling below the top re-arms it but not the lower steps; the marker
 -- shrinks with the state so a restart cannot resurrect a stale step.
 turncomplete("S1", 50, 100)
 check("marker shrinks with state", disk.files[marker("S1")], "0.4")
 turncomplete("S1", 65, 100)
-check("refires only the re-armed step", #notifications, 7)
-check("second step refire text", notifications[7].text:find("65% full", 1, true) ~= nil, true)
+check("refires only the re-armed step", #notifications, 8)
+check("second step refire text", notifications[8].text:find("65% full", 1, true) ~= nil, true)
 turncomplete("S1", 90, 100)
-check("top refires after second", #notifications, 8)
+check("top refires after second", #notifications, 9)
 
 -- The marker keeps the reminder quiet across a restart.
 restart()
 turncomplete("S1", 90, 100)
-check("restart stays quiet", #notifications, 8)
+check("restart stays quiet", #notifications, 9)
 
 -- SessionEnd must not clear the marker: shutdown and reload fire it too.
 fire("SessionEnd", { session_id = "S1", reason = "shutdown" })
 turncomplete("S1", 90, 100)
-check("session end keeps the marker quiet", #notifications, 8)
-check("marker still there", disk.files[marker("S1")], "0.8")
+check("session end keeps the marker quiet", #notifications, 9)
+check("marker still there", disk.files[marker("S1")], "0.85")
 
 -- CompactionDone re-arms: context dropped, next crossing notifies again.
 fire("CompactionDone", { session_id = "S1" })
 check_nil("compaction clears marker", disk.files[marker("S1")])
 turncomplete("S1", 85, 100)
-check("compaction re-arms", #notifications, 9)
+check("compaction re-arms", #notifications, 10)
 
 -- A restart replants nothing: the re-armed reminder fires once more.
 restart()
 turncomplete("S1", 85, 100)
-check("restart after compaction stays quiet", #notifications, 9)
+check("restart after compaction stays quiet", #notifications, 10)
 
 -- Markers are per session: S2 fires from scratch while S1 stays quiet.
 turncomplete("S2", 42, 100)
-check("other session fires", #notifications, 10)
+check("other session fires", #notifications, 11)
 check("other session marker", disk.files[marker("S2")], "0.4")
 turncomplete("S1", 90, 100)
-check("first session still quiet", #notifications, 10)
+check("first session still quiet", #notifications, 11)
 
 -- A stale marker clears on the first TurnComplete below every step.
 turncomplete("S1", 20, 100)
 check_nil("stale marker cleared", disk.files[marker("S1")])
 turncomplete("S1", 42, 100)
-check("fires after stale clear", #notifications, 11)
+check("fires after stale clear", #notifications, 12)
 
 -- The marker never surfaces as a note.
 local tool = api.tools["notes"]
@@ -317,12 +322,12 @@ check("list shows the note", listing:find("a.md", 1, true) ~= nil, true)
 STATE.dir = nil
 restart()
 turncomplete("S3", 85, 100)
-check("fires without state dir", #notifications, 12)
+check("fires without state dir", #notifications, 13)
 turncomplete("S3", 90, 100)
-check("hysteresis without state dir", #notifications, 12)
+check("hysteresis without state dir", #notifications, 13)
 turncomplete("S3", 50, 100)
 turncomplete("S3", 85, 100)
-check("re-arms without state dir", #notifications, 13)
+check("re-arms without state dir", #notifications, 14)
 STATE.dir = "/state"
 
 -- A legacy marker from the single-threshold plugin ("1", planted at 80%)
@@ -330,7 +335,7 @@ STATE.dir = "/state"
 disk.files[marker("S4")] = "1"
 restart()
 turncomplete("S4", 90, 100)
-check("legacy marker stays quiet", #notifications, 13)
+check("legacy marker stays quiet", #notifications, 14)
 turncomplete("S4", 20, 100)
 check_nil("legacy marker cleared below all steps", disk.files[marker("S4")])
 

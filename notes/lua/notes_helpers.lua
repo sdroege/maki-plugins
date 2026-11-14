@@ -13,7 +13,12 @@ M.MAX_MATCHES_PER_FILE = 10
 M.MAX_SCAN_FILES = 100
 M.MAX_PATH_DEPTH = 8
 M.HINT_LIST_CAP = 50
-M.DEFAULT_REMIND_STEPS = { 0.4, 0.6, 0.8 }
+-- The trailing step trades the save nudge for the compact ask: by then state
+-- should be safe in notes, and a model-triggered compaction at a task
+-- boundary beats the automatic one. Custom step lists that include it get
+-- the same wording at that step.
+M.COMPACT_STEP = 0.85
+M.DEFAULT_REMIND_STEPS = { 0.4, 0.6, 0.8, M.COMPACT_STEP }
 
 M.NO_NOTES_MSG = "no notes in this session yet: use write to create one"
 M.NO_MATCHES_MSG = "no notes match the query"
@@ -71,7 +76,13 @@ function M.reminder_text(context_size, context_window, step)
   end
   local pct = math.floor(context_size / context_window * 100 + 0.5)
   local steps = config.remind_steps
-  if step == nil or step == steps[#steps] then
+  if step == M.COMPACT_STEP then
+    return ("context is %d%% full: save what matters to notes, then call compact at your next task boundary"):format(pct)
+  end
+  -- The nearly-full urgency rides the last save step, wherever the compact
+  -- ask left it.
+  local top = steps[#steps] == M.COMPACT_STEP and steps[#steps - 1] or steps[#steps]
+  if step == nil or step == top then
     return ("context is nearly full (%d%% of the window): save important session state to notes now, before a compaction drops it"):format(
       pct
     )

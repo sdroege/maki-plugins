@@ -267,9 +267,52 @@ Paths are relative with no empty, '.', or '..' components, at most 8 levels deep
   end,
 })
 
+-- The compact ask only pays off once notes hold what the summary might
+-- drop, so the tool lives with them.
+local MAIN_TASK = "main"
+
+maki.api.register_tool({
+  name = "compact",
+  description = [[Compact this session's history now. Call it at a natural boundary, for example after finishing a task, or whenever the user asks. Do not call it early in a session or mid-task before state is saved. When the context runs high, prefer it over waiting for automatic compaction. `instructions` say what the summary must keep.
+
+Never batch this call with others: the summary swallows their results before you can read them.]],
+
+  schema = {
+    type = "object",
+    properties = {
+      instructions = {
+        type = "string",
+        description = "What the summary must keep (open questions, decisions, failing test names).",
+      },
+    },
+  },
+
+  handler = function(input, ctx)
+    -- A subagent shares its session id with the parent; only the task id
+    -- tells them apart, and "main" is never a task the mailbox knows. The
+    -- mailbox itself rejects a request while one is still pending.
+    local task = ctx:task_id()
+    local ok, err = maki.session.request_compact({
+      session = ctx:session_id(),
+      task = task ~= MAIN_TASK and task or nil,
+      instructions = input.instructions,
+    })
+    if not ok then
+      return { llm_output = "Error: " .. err, is_error = true }
+    end
+    -- Kept short: this result is often inside what the summarizer reads.
+    return "Compaction queued. Your next request runs on the summary."
+  end,
+})
+
 maki.api.register_prompt_hint({
   slot = "tool_usage",
   content = "- Save session state that must survive compaction to **notes**, appending right after each milestone (a passing test, a design decision, a discovered layout). Use **memory** only for knowledge useful in future sessions on this project. Read notes back after a compaction before redoing work.",
+})
+
+maki.api.register_prompt_hint({
+  slot = "tool_usage",
+  content = "- Call **compact** at a task end once the context runs high, after saving what must not be lost.",
 })
 
 local outstanding = {}

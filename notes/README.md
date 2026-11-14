@@ -14,13 +14,18 @@ For cross-session, project-scoped notes use the built-in `memory` tool.
 - `notes` tool: `list`, `read` (with line ranges), `search`, `append`,
   `write`. Strongly consistent local files, capped at 1 MiB per note.
   Limit-like arguments are clamped, never rejected. No model-facing delete.
+- A `compact` tool the model calls at a natural boundary to summarize the
+  session itself, with the same free-form guidance input as `/compact`. A
+  subagent calling it compacts its own conversation.
 - A `TurnComplete` listener that nudges the model to save important state to
   `notes` as the context window fills, at 40%, 60%, and 80% of the window
   (configurable), with hysteresis: each step fires once per crossing, one
-  nudge per event even when a jump crosses several steps. Subagents are
+  nudge per event even when a jump crosses several steps. The last step,
+  at 85%, trades the save ask for the compact ask. Subagents are
   nudged too, addressed by the task id their events carry, and their state
   dies with the session that opened them.
-- Prompt hints: a system-prompt nudge to save/read notes around compaction.
+- Prompt hints: a system-prompt nudge to save/read notes around compaction,
+  and one to call `compact` at a task end once the context runs high.
 - An `agent.compact.before` layer that gives every automatic compaction one
   turn: the ask defers with a nudge to save notes, delivered as the model's
   next message, and the ask after that turn runs with a read-back naming the
@@ -40,8 +45,8 @@ For cross-session, project-scoped notes use the built-in `memory` tool.
 
 Requires maki 0.7.2 or newer.
 
-> **Note:** the `defer` verdict of `agent.compact.before` and the `task`
-> option of `maki.session.notify` are not merged upstream yet. Build maki from
+> **Note:** the `defer` verdict of `agent.compact.before`, the `task`
+> option of `maki.session.notify`, and `maki.session.request_compact` are not merged upstream yet. Build maki from
 > the [`dev` branch](https://github.com/sdroege/maki/tree/dev) for now.
 > Everything else this plugin uses is upstream.
 
@@ -64,7 +69,7 @@ your `init.lua`:
 
 ```lua
 require("notes_helpers").setup({
-  remind_steps = { 0.4, 0.6, 0.8 }, -- nudge as context passes each fraction
+  remind_steps = { 0.4, 0.6, 0.8, 0.85 }, -- nudge as context passes each fraction
   -- remind_at = 0.8, -- single-threshold shorthand for one step
   -- reminder_text = "custom nudge text", -- overrides every step's text
 })
@@ -72,7 +77,10 @@ require("notes_helpers").setup({
 
 Each step nudges once per crossing and re-arms when usage falls below it or a
 compaction runs. The texts escalate by step: the first asks to start a note,
-the middle ones to update, the last to save before compaction.
+the middle ones to update, the last save step to save before compaction. The
+step at 0.85 is special: it asks for `compact` at the next task boundary
+instead of a save. Drop it from `remind_steps` to silence that ask, or add it
+at your own threshold to move it.
 
 ## Permissions
 
