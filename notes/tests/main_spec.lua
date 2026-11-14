@@ -400,7 +400,8 @@ check("subagent reads back the session notes", verdict.continue:find("a.md", 1, 
 check("subagent notifies nobody", #notifications, noted)
 
 -- The layer is stateless, so every auto ask carries the same offer, and
--- without notes the read-back is simply empty.
+-- without notes the read-back is simply empty. The host refuses a defer that
+-- leaves no room for the save turn.
 verdict = compact_before({ reason = "auto", context_size = 9000, usable = 9000 }, main_ctx)
 check("every auto ask defers", verdict.defer ~= nil, true)
 local s2_ctx = { session_id = "S2", context_window = 10000 }
@@ -408,28 +409,6 @@ verdict = compact_before({ reason = "auto", context_size = 8500, usable = 9000 }
 check("defers without notes too", verdict.defer ~= nil, true)
 check_nil("no read-back without notes", verdict.continue)
 check_nil("no summary instructions without notes", verdict.instructions)
-
--- The defer needs room for the nudge above the gate. The slack is half the
--- reserve, with an absolute floor for tiny windows.
-verdict = compact_before({ reason = "auto", context_size = 9511, usable = 9000 }, main_ctx)
-check("defers while the slack fits", verdict.defer ~= nil, true)
-verdict = compact_before({ reason = "auto", context_size = 9512, usable = 9000 }, main_ctx)
-check_nil("an ask past the slack never defers", verdict.defer)
-
--- A huge window would put a percentage of the whole window below the gate;
--- the slack is a share of the reserve instead.
-local huge_ctx = { session_id = "S1", context_window = 1000000 }
-verdict = compact_before({ reason = "auto", context_size = 994999, usable = 990000 }, huge_ctx)
-check("a huge window scales the slack", verdict.defer ~= nil, true)
-verdict = compact_before({ reason = "auto", context_size = 995000, usable = 990000 }, huge_ctx)
-check_nil("a huge window still stops at the slack", verdict.defer)
-
--- A tiny window keeps enough absolute room for the nudge.
-local small_ctx = { session_id = "S1", context_window = 2048 }
-verdict = compact_before({ reason = "auto", context_size = 1535, usable = 1024 }, small_ctx)
-check("a tiny window keeps the absolute floor", verdict.defer ~= nil, true)
-verdict = compact_before({ reason = "auto", context_size = 1536, usable = 1024 }, small_ctx)
-check_nil("a tiny window still stops at the floor", verdict.defer)
 
 if failures > 0 then
   print(("\n%d test(s) failed"):format(failures))
