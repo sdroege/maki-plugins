@@ -69,18 +69,17 @@ your `init.lua`:
 
 ```lua
 require("notes_helpers").setup({
-  remind_steps = { 0.4, 0.6, 0.8, 0.85 }, -- nudge as context passes each fraction
-  -- remind_at = 0.8, -- single-threshold shorthand for one step
+  remind_steps = { 0.4, 0.6, 0.8, 0.85 }, -- nudge as context passes each fraction, at least three
   -- reminder_text = "custom nudge text", -- overrides every step's text
 })
 ```
 
 Each step nudges once per crossing and re-arms when usage falls below it or a
-compaction runs. The texts escalate by step: the first asks to start a note,
-the middle ones to update, the last save step to save before compaction. The
-step at 0.85 is special: it asks for `compact` at the next task boundary
-instead of a save. Drop it from `remind_steps` to silence that ask, or add it
-at your own threshold to move it.
+compaction runs. The roles are positional: the first step asks to start a
+note, the one below the last to save before compaction, and the last asks for
+`compact` at the next task boundary instead of a save. Middle steps ask to
+update your notes. `reminder_text` overrides every step's text, including the
+compact ask.
 
 ## Permissions
 

@@ -13,12 +13,12 @@ M.MAX_MATCHES_PER_FILE = 10
 M.MAX_SCAN_FILES = 100
 M.MAX_PATH_DEPTH = 8
 M.HINT_LIST_CAP = 50
--- The trailing step trades the save nudge for the compact ask: by then state
--- should be safe in notes, and a model-triggered compaction at a task
--- boundary beats the automatic one. Custom step lists that include it get
--- the same wording at that step.
-M.COMPACT_STEP = 0.85
-M.DEFAULT_REMIND_STEPS = { 0.4, 0.6, 0.8, M.COMPACT_STEP }
+-- Reminder roles are positional: the first step asks to start notes, the
+-- one below the last to save before compaction, the last trades the save
+-- ask for the `compact` ask at a task boundary. The minimum of three keeps
+-- the roles distinct.
+M.MIN_STEPS = 3
+M.DEFAULT_REMIND_STEPS = { 0.4, 0.6, 0.8, 0.85 }
 
 M.NO_NOTES_MSG = "no notes in this session yet: use write to create one"
 M.NO_MATCHES_MSG = "no notes match the query"
@@ -47,17 +47,22 @@ local function normalize_steps(list)
     end
   end
   table.sort(steps)
+  -- Equal values would blur the positional roles.
+  for i = #steps, 2, -1 do
+    if steps[i] == steps[i - 1] then
+      table.remove(steps, i)
+    end
+  end
+  if #steps < M.MIN_STEPS then
+    return nil
+  end
   return steps
 end
 
 function M.setup(opts)
   opts = type(opts) == "table" and opts or {}
-  -- remind_at is the pre-steps single-threshold option; keep accepting it.
   local steps = normalize_steps(opts.remind_steps)
-    or (type(opts.remind_at) == "number" and opts.remind_at > 0 and opts.remind_at <= 1
-      and { opts.remind_at }
-      or nil)
-  if steps and #steps > 0 then
+  if steps then
     config.remind_steps = steps
   end
   if type(opts.reminder_text) == "string" and opts.reminder_text ~= "" then
@@ -76,12 +81,10 @@ function M.reminder_text(context_size, context_window, step)
   end
   local pct = math.floor(context_size / context_window * 100 + 0.5)
   local steps = config.remind_steps
-  if step == M.COMPACT_STEP then
+  if step == steps[#steps] then
     return ("context is %d%% full: save what matters to notes, then call compact at your next task boundary"):format(pct)
   end
-  -- The nearly-full urgency rides the last save step, wherever the compact
-  -- ask left it.
-  local top = steps[#steps] == M.COMPACT_STEP and steps[#steps - 1] or steps[#steps]
+  local top = steps[#steps - 1]
   if step == nil or step == top then
     return ("context is nearly full (%d%% of the window): save important session state to notes now, before a compaction drops it"):format(
       pct

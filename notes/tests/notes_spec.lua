@@ -202,19 +202,34 @@ check("marker state for garbage", h.state_from_marker("junk", steps), 3)
 
 -- setup
 check("default steps", table.concat(h.remind_steps(), ","), "0.4,0.6,0.8,0.85")
-h.setup({ remind_at = 0.9, reminder_text = "custom" })
-check("single fraction becomes one step", table.concat(h.remind_steps(), ","), "0.9")
-check("custom reminder text", h.reminder_text(95, 100), "custom")
-fire = select(1, h.should_remind(nil, 85, 100, h.remind_steps()))
-check("setup fraction applied", fire, nil)
-h.setup({ remind_steps = { 0.5, 0.2 } })
-check("steps sorted", table.concat(h.remind_steps(), ","), "0.2,0.5")
-h.setup({ remind_steps = { 2, "x" } })
-check("setup ignores bad steps", table.concat(h.remind_steps(), ","), "0.2,0.5")
-h.setup({ remind_at = 2 })
-check("setup ignores bad fraction", table.concat(h.remind_steps(), ","), "0.2,0.5")
+h.setup({ remind_steps = { 0.9, 0.5, 0.7 } })
+check("steps sorted", table.concat(h.remind_steps(), ","), "0.5,0.7,0.9")
+check(
+  "last step asks for compact wherever it sits",
+  h.reminder_text(91, 100, 0.9),
+  "context is 91% full: save what matters to notes, then call compact at your next task boundary"
+)
+check(
+  "second-to-last step is nearly full",
+  h.reminder_text(71, 100, 0.7),
+  "context is nearly full (71% of the window): save important session state to notes now, before a compaction drops it"
+)
+check(
+  "first step starts a note",
+  h.reminder_text(52, 100, 0.5),
+  "context is 52% full: start a note now with important session state, so a later compaction cannot drop it"
+)
+h.setup({ remind_steps = { 0.5, 0.7 } })
+check("setup needs three steps", table.concat(h.remind_steps(), ","), "0.5,0.7,0.9")
+h.setup({ remind_steps = { 0.5, 0.5, 0.7 } })
+check("deduped below three is rejected", table.concat(h.remind_steps(), ","), "0.5,0.7,0.9")
+h.setup({ remind_steps = { 2, "x", 0.7, 0.5, 0.6 } })
+check("setup ignores bad steps", table.concat(h.remind_steps(), ","), "0.5,0.6,0.7")
 h.setup("junk")
-check("setup ignores non-table", table.concat(h.remind_steps(), ","), "0.2,0.5")
+check("setup ignores non-table", table.concat(h.remind_steps(), ","), "0.5,0.6,0.7")
+h.setup({ reminder_text = "custom" })
+check("custom reminder text", h.reminder_text(95, 100), "custom")
+check("custom text overrides the compact ask too", h.reminder_text(95, 100, 0.7), "custom")
 
 -- compact_hint
 check_nil("hint no files", h.compact_hint({}))
