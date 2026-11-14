@@ -324,10 +324,10 @@ check_nil("legacy marker cleared below all steps", disk.files[marker("S4")])
 -- notes read-back in the same verdict; the once cap and the delivery are the
 -- host's. S1 still holds a.md from the marker test above.
 restart()
-local main_ctx = { session_id = "S1", context_window = 100 }
+local main_ctx = { session_id = "S1", context_window = 10000 }
 local noted = #notifications
-local verdict = compact_before({ reason = "auto", context_size = 85 }, main_ctx)
-check("auto defers with the save nudge", verdict.defer:find("save session state", 1, true) ~= nil, true)
+local verdict = compact_before({ reason = "auto", context_size = 8500, usable = 9000 }, main_ctx)
+check("auto defers with the save nudge", verdict.defer:find("save any session state", 1, true) ~= nil, true)
 check(
   "defer nudge says it is a pause, not a step",
   verdict.defer:find("compaction is paused", 1, true) ~= nil and verdict.defer:find("nearly full", 1, true) == nil,
@@ -335,64 +335,87 @@ check(
 )
 check("nudge names the fill", verdict.defer:find("85% of the window", 1, true) ~= nil, true)
 check(
-  "nudge puts the compaction at the run's end",
-  verdict.defer:find("compaction runs when this answer ends the run", 1, true) ~= nil,
+  "nudge puts the compaction after this turn",
+  verdict.defer:find("compaction runs automatically after this turn", 1, true) ~= nil,
   true
 )
 check(
-  "nudge caps the save at one call and demands a tool-free answer",
-  verdict.defer:find("at most one more tool call", 1, true) ~= nil and verdict.defer:find("no tool calls", 1, true) ~= nil,
+  "nudge asks for the save in this turn, not an answer",
+  verdict.defer:find("in this turn", 1, true) ~= nil and verdict.defer:find("no tool calls", 1, true) == nil,
   true
 )
-  check("read-back rides the same verdict", verdict.continue:find("a.md", 1, true) ~= nil, true)
-  check("read-back says read first", verdict.continue:find("before doing any work", 1, true) ~= nil, true)
-  check(
-    "summary instructions name the notes",
-    verdict.instructions
-      and verdict.instructions:find("a.md", 1, true) ~= nil
-      and verdict.instructions:find("notes list", 1, true) ~= nil,
-    true
-  )
-  check("the layer notifies nobody", #notifications, noted)
+check("read-back rides the same verdict", verdict.continue:find("a.md", 1, true) ~= nil, true)
+check("read-back says read first", verdict.continue:find("before doing any work", 1, true) ~= nil, true)
+check(
+  "summary instructions name the notes",
+  verdict.instructions
+    and verdict.instructions:find("a.md", 1, true) ~= nil
+    and verdict.instructions:find("notes list", 1, true) ~= nil,
+  true
+)
+check("the layer notifies nobody", #notifications, noted)
 
 -- A manual /compact and an overflow recovery are obeyed, only read back.
-verdict = compact_before({ reason = "manual", context_size = 60, request_instructions = "tidy up" }, main_ctx)
+verdict = compact_before({ reason = "manual", context_size = 6000, usable = 9000, request_instructions = "tidy up" }, main_ctx)
 check_nil("manual never defers", verdict.defer)
 check("manual reads back", verdict.continue:find("a.md", 1, true) ~= nil, true)
 check("manual summary instructions name the notes", verdict.instructions:find("a.md", 1, true) ~= nil, true)
-verdict = compact_before({ reason = "overflow", context_size = 100 }, main_ctx)
+verdict = compact_before({ reason = "overflow", context_size = 10000, usable = 9000 }, main_ctx)
 check_nil("overflow never defers", verdict.defer)
 check("overflow reads back", verdict.continue:find("a.md", 1, true) ~= nil, true)
 
--- `continue` is one string shared by every compact.before layer, so the
--- layer appends its read-back to what an earlier layer wrote instead of
+-- `continue` and `defer` are one string each shared by every compact.before
+-- layer, so the layer appends to what an earlier layer wrote instead of
 -- replacing it.
-verdict = compact_before({ reason = "manual", context_size = 60, continue = "an earlier layer spoke" }, main_ctx)
+verdict = compact_before({ reason = "manual", context_size = 6000, usable = 9000, continue = "an earlier layer spoke" }, main_ctx)
 check("keeps another layer's continue", verdict.continue:find("an earlier layer spoke", 1, true) ~= nil, true)
 check("appends the read-back after it", verdict.continue:find("an earlier layer spoke") < verdict.continue:find("a.md"), true)
+verdict = compact_before({ reason = "auto", context_size = 8500, usable = 9000, defer = "an earlier layer spoke" }, main_ctx)
+check("keeps another layer's defer", verdict.defer:find("an earlier layer spoke", 1, true) ~= nil, true)
+check(
+  "appends the nudge after it",
+  verdict.defer:find("an earlier layer spoke") < verdict.defer:find("automatic compaction is paused"),
+  true
+)
 
--- A subagent gets the read-back but never a defer: its run has no
--- after-the-run to wait for, and the host ignores a defer there anyway.
-local sub_ctx = { session_id = "S1", task_id = "T7", context_window = 100 }
-verdict = compact_before({ reason = "auto", context_size = 85 }, sub_ctx)
-check_nil("subagent never defers", verdict.defer)
+-- A subagent gets the same save turn and read-back as the main session.
+local sub_ctx = { session_id = "S1", task_id = "T7", context_window = 10000 }
+verdict = compact_before({ reason = "auto", context_size = 8500, usable = 9000 }, sub_ctx)
+check("subagent defers too", verdict.defer ~= nil, true)
 check("subagent reads back the session notes", verdict.continue:find("a.md", 1, true) ~= nil, true)
 check("subagent notifies nobody", #notifications, noted)
 
 -- The layer is stateless, so every auto ask carries the same offer, and
 -- without notes the read-back is simply empty.
-verdict = compact_before({ reason = "auto", context_size = 90 }, main_ctx)
+verdict = compact_before({ reason = "auto", context_size = 9000, usable = 9000 }, main_ctx)
 check("every auto ask defers", verdict.defer ~= nil, true)
-local s2_ctx = { session_id = "S2", context_window = 100 }
-verdict = compact_before({ reason = "auto", context_size = 85 }, s2_ctx)
+local s2_ctx = { session_id = "S2", context_window = 10000 }
+verdict = compact_before({ reason = "auto", context_size = 8500, usable = 9000 }, s2_ctx)
 check("defers without notes too", verdict.defer ~= nil, true)
 check_nil("no read-back without notes", verdict.continue)
 check_nil("no summary instructions without notes", verdict.instructions)
 
--- Near the window's edge the wrap-up turn cannot fit, so the nudge would
--- promise a settle the overflow recovery tramples anyway.
-verdict = compact_before({ reason = "auto", context_size = 95 }, main_ctx)
-check_nil("an ask at the window's edge never defers", verdict.defer)
+-- The defer needs room for the nudge above the gate. The slack is half the
+-- reserve, with an absolute floor for tiny windows.
+verdict = compact_before({ reason = "auto", context_size = 9511, usable = 9000 }, main_ctx)
+check("defers while the slack fits", verdict.defer ~= nil, true)
+verdict = compact_before({ reason = "auto", context_size = 9512, usable = 9000 }, main_ctx)
+check_nil("an ask past the slack never defers", verdict.defer)
+
+-- A huge window would put a percentage of the whole window below the gate;
+-- the slack is a share of the reserve instead.
+local huge_ctx = { session_id = "S1", context_window = 1000000 }
+verdict = compact_before({ reason = "auto", context_size = 994999, usable = 990000 }, huge_ctx)
+check("a huge window scales the slack", verdict.defer ~= nil, true)
+verdict = compact_before({ reason = "auto", context_size = 995000, usable = 990000 }, huge_ctx)
+check_nil("a huge window still stops at the slack", verdict.defer)
+
+-- A tiny window keeps enough absolute room for the nudge.
+local small_ctx = { session_id = "S1", context_window = 2048 }
+verdict = compact_before({ reason = "auto", context_size = 1535, usable = 1024 }, small_ctx)
+check("a tiny window keeps the absolute floor", verdict.defer ~= nil, true)
+verdict = compact_before({ reason = "auto", context_size = 1536, usable = 1024 }, small_ctx)
+check_nil("a tiny window still stops at the floor", verdict.defer)
 
 if failures > 0 then
   print(("\n%d test(s) failed"):format(failures))

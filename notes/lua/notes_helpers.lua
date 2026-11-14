@@ -87,18 +87,14 @@ function M.reminder_text(context_size, context_window, step)
 end
 
 -- The defer nudge rides a compaction that was just skipped, unlike the step
--- reminders' advice: it announces a pause that ends with the model's next
--- tool-free answer, so the model must not mistake it for a step reminder or
--- ignore it twice. The grace the host grants is unbounded, so the text pushes
--- for the shortest possible save: every extra tool call grows the context
--- while the pause runs and can force the compaction through the overflow
--- backstop instead.
+-- reminders: it announces a pause that ends after one turn, so the model must
+-- save in this response or lose the state.
 function M.defer_text(context_size, context_window)
   if config.reminder_text then
     return config.reminder_text
   end
   local pct = math.floor(context_size / context_window * 100 + 0.5)
-  return ("automatic compaction is paused (%d%% of the window): wrap up now; you get at most one more tool call to save session state to notes, then your next message must be the answer with no tool calls; compaction runs when this answer ends the run and drops unsaved state"):format(
+  return ("automatic compaction is paused (%d%% of the window): save any session state you need to keep to notes now, in this turn; compaction runs automatically after this turn and drops unsaved state"):format(
     pct
   )
 end

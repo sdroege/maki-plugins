@@ -6,11 +6,11 @@ local Toast = require("maki.toast")
 -- Matches safe_path's component cap, so every valid path is listable.
 local WALK_DEPTH = helpers.MAX_PATH_DEPTH
 
--- Past this share of the window a defer is a broken promise: the gauge is a
--- floor for the true token count, so the next request overflows anyway and
--- an overflow recovery cannot be deferred. Skipping the nudge then sends the
--- model into the compaction the defer exists to postpone.
-local DEFER_MAX_USED_PCT = 95
+-- The gate fires at `usable`, which already reserves room for the model's
+-- output and the gauge's underestimate. Let the gauge sit half of that
+-- reserve above the gate, with an absolute floor for tiny windows.
+local DEFER_SLACK_PCT = 50
+local DEFER_MIN_SLACK_TOKENS = 512
 
 local function render_content(content, path, ctx)
   local buf = maki.ui.buf()
@@ -312,19 +312,14 @@ local function marker_clear(sid)
   end
 end
 
--- The last save before a compaction and the read-back after it ride
--- `agent.compact.before`, which fires inside the run it steers: a subagent
--- gets the read-back too, but never a defer, its run has no later moment
--- to wait for and the host ignores a defer there. The summary instructions
--- ride the same verdict: the note filenames as of the compaction moment,
--- never stale from a run-start snapshot. The first automatic ask
--- buys a turn, but only while the window still has headroom for the wrap-up
--- (DEFER_MAX_USED_PCT): the defer skips the compaction and hands the model
--- the nudge as its next message, and the ask after it proceeds with the
--- read-back attached. The layer keeps no state, the host caps the defer to
--- one per compaction. A manual `/compact` and an overflow recovery do what
--- they were asked and only get the read-back. The layer only adds its own
--- fields so other compact.before layers keep theirs.
+-- The save turn and the read-back ride `agent.compact.before`, which fires
+-- inside the run it steers, so subagents get them too. The summary
+-- instructions name the note filenames as of the compaction moment. The
+-- first automatic ask defers with a nudge while the reserve above the gate
+-- has room for the save; the ask after that turn proceeds with the read-back.
+-- The host caps the defer to one per compaction, so the layer keeps no state.
+-- Manual and overflow compactions only get the read-back. The layer only adds
+-- its own fields so other compact.before layers keep theirs.
 maki.api.set_slot("agent.compact.before", function(prev, value, ctx)
   local dir = notes_dir(ctx.session_id)
   local paths = dir and list_files(dir, nil)
@@ -338,12 +333,14 @@ maki.api.set_slot("agent.compact.before", function(prev, value, ctx)
   if read_back then
     value.continue = value.continue and (value.continue .. "\n\n" .. read_back) or read_back
   end
-  if
-    value.reason == "auto"
-    and not ctx.task_id
-    and value.context_size * 100 < ctx.context_window * DEFER_MAX_USED_PCT
-  then
-    value.defer = helpers.defer_text(value.context_size, ctx.context_window)
+  local reserved = ctx.context_window - value.usable
+  local slack = math.max(
+    DEFER_MIN_SLACK_TOKENS,
+    math.floor(reserved * DEFER_SLACK_PCT / 100)
+  )
+  if value.reason == "auto" and value.context_size < value.usable + slack then
+    local nudge = helpers.defer_text(value.context_size, ctx.context_window)
+    value.defer = value.defer and (value.defer .. "\n\n" .. nudge) or nudge
   end
   return prev(value, ctx)
 end)

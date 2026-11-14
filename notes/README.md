@@ -20,17 +20,17 @@ For cross-session, project-scoped notes use the built-in `memory` tool.
   nudge per event even when a jump crosses several steps.
 - Prompt hints: a system-prompt nudge to save/read notes around compaction.
 - An `agent.compact.before` layer that gives every automatic compaction one
-  turn of grace: the ask defers with a nudge to save notes, delivered as the
-  model's next message, and the ask after it runs with a read-back naming the
+  turn: the ask defers with a nudge to save notes, delivered as the model's
+  next message, and the ask after that turn runs with a read-back naming the
   surviving notes attached to the message the agent resumes with. The same
   verdict adds the note filenames to the compaction summary's instructions,
-  computed at the compaction moment so they are never stale. The host
-  caps the defer to one per compaction, so the layer keeps no state. A manual
+  computed at the compaction moment so they are never stale. The host caps
+  the defer to one per compaction, so the layer keeps no state. A manual
   `/compact` and an overflow recovery are obeyed at once, only read back. The
   summary alone is passive text the model can skim past; the read-back is a
   fresh message that names the files, which is what makes it actually happen.
-  Subagent runs ride the same hook: they are steered from inside their own
-  run, so the save-before and read-back work without ever addressing them.
+  Subagent runs ride the same hook, so the save turn and read-back work
+  without ever addressing them.
 - `/notes`: a picker over the current session's notes. Enter opens a file
   in `$EDITOR`, Ctrl+D deletes.
 
