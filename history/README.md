@@ -35,7 +35,7 @@ on disk.
 
 ## Install
 
-Requires maki 0.6.0 or newer.
+Requires maki 0.7.2 or newer.
 
 Clone the repository and symlink this plugin into maki's package directory:
 

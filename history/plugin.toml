@@ -1,4 +1,4 @@
-min_maki_version = "0.6.0"
+min_maki_version = "0.7.2"
 
 # The agent.compact.before layer steers what the agent does next, and every
 # agent.* slot costs every permission, so the manifest asks for all of them

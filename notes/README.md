@@ -36,7 +36,7 @@ For cross-session, project-scoped notes use the built-in `memory` tool.
 
 ## Install
 
-Requires maki 0.6.0 or newer.
+Requires maki 0.7.2 or newer.
 
 > **Note:** the `defer` verdict of `agent.compact.before` is not merged
 > upstream yet. Build maki from the [`dev` branch](https://github.com/sdroege/maki/tree/dev)
