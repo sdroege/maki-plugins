@@ -51,13 +51,10 @@ details.
 
 ## Permissions
 
-The manifest asks for every permission, because the `agent.compact.before`
-layer steers what the agent does next and every `agent.*` slot costs all
-of them: a plugin missing one gets its layer skipped. What the plugin
-actually uses is narrower: `session_read`, to read the transcript through
-`maki.session.windows`, `maki.session.messages` and `maki.session.subagents`
-(and to receive the event subscriptions whole), and `agent`, for the slot
-itself.
+`session_read` reads the transcript through `maki.session.windows`,
+`maki.session.messages` and `maki.session.subagents`. Those three are also
+exactly the price of the `agent.compact.before` layer: `agent`,
+`session_read` and `session_write`.
 
 ## Tests
 

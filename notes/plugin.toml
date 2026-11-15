@@ -1,16 +1,11 @@
 min_maki_version = "0.7.2"
 
-# The agent.compact.before layer steers what the agent does next, and every
-# agent.* slot costs every permission, so the manifest asks for all of them
-# even though the plugin itself only touches the notes dir and the session.
+# agent, session_read and session_write are the price of the
+# agent.compact.before layer, the notify reminders and the compact
+# request. The plugin reaches nothing but the session's notes dir.
 [permissions]
 fs_read = true
 fs_write = true
-net = true
-run = true
-env = true
 agent = true
 session_read = true
 session_write = true
-session_settings = true
-input = true

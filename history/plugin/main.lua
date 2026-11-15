@@ -253,9 +253,7 @@ maki.api.register_prompt_hint({
 -- `agent.compact.before`, so they sit behind every compaction the same
 -- way: auto and manual `/compact`, overflow, idle or mid-run. A notify
 -- instead rides session activity: one answer late after an auto
--- compaction, a started turn for `/compact` on an idle session. A layer on
--- an agent.* slot costs every permission, which is the price of the
--- uniform placement (plugin.toml).
+-- compaction, a started turn for `/compact` on an idle session.
 maki.api.set_slot("agent.compact.before", function(prev, value, ctx)
   local instructions =
     "The archived transcript stays readable with the history tool. The summary must still stand on its own, but exact details (full outputs, exact wording) can be left to history search and read_item instead of copying them into the summary."

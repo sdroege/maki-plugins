@@ -83,14 +83,11 @@ compact ask.
 
 ## Permissions
 
-The manifest asks for every permission, because the `agent.compact.before`
-layer steers what the agent does next and every `agent.*` slot costs all
-of them: a plugin missing one gets its layer skipped. What the plugin
-actually uses is narrower: `fs_read` and `fs_write` for the session's own
-notes dir and the `/notes` picker. `agent` and `session_write` let the
-reminders wake the session with a `notify` observation, and `session_read`
-keeps the `TurnComplete` subscription whole instead of stripped to its
-metadata.
+`fs_read` and `fs_write` cover the session's own notes dir and the `/notes`
+picker. `agent`, `session_read` and `session_write` are the price of the
+`agent.compact.before` layer, and the reminders need them too: waking the
+session with a `notify` observation and asking for a compaction both cost
+the same.
 
 ## Tests
 
