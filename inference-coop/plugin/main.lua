@@ -48,13 +48,15 @@ end
 
 local MODELS = {
   {
-    -- The co-op's default model.
+    -- The co-op's default model. Serves the 1017 snapshot since 2026-11-16
+    -- (GreenPT dropped the base release) under the same id, so only the rate
+    -- moved: GreenPT's 1017 list, 0.36/1.45/0.04.
     prefixes = { "greenpt/deepseek-v4.1-flash" },
     tier = "medium",
     context_window = 1000000,
     supports_thinking = true,
     supports_vision = true,
-    pricing = { input = 0.22, output = 1.10, cache_write = 0.0, cache_read = 0.011 },
+    pricing = { input = 0.36, output = 1.45, cache_write = 0.0, cache_read = 0.04 },
     thinking_fields = efforts("off", "minimal", "low", "medium", "high"),
   },
   {
