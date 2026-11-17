@@ -1,10 +1,12 @@
 local git_diff = require("git_diff")
 local rg = require("rg")
 local safe_sed = require("safe_sed")
+local blocked_hosts = require("blocked_hosts")
 
 local FILTERS = {
   git_diff.filter,
   rg.filter,
+  blocked_hosts.filter,
 }
 
 maki.api.set_slot("tool.bash.input", function(prev, input, ctx)
@@ -13,6 +15,17 @@ maki.api.set_slot("tool.bash.input", function(prev, input, ctx)
     if reason then
       return nil, reason
     end
+  end
+  return prev(input, ctx)
+end)
+
+-- Routify file-proxy URLs are hallucinated fetch targets that always 403.
+-- webfetch is not bash, so the FILTERS loop above never sees it; reject the
+-- blocked host before the permission prompt fires.
+maki.api.set_slot("tool.webfetch.input", function(prev, input, ctx)
+  local reason = blocked_hosts.check_webfetch(input)
+  if reason then
+    return nil, reason
   end
   return prev(input, ctx)
 end)
