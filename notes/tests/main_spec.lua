@@ -345,6 +345,35 @@ check("archive rejects collisions", archive(archive_path).is_error, true)
 check("archive does not replace a previous copy", disk.files[archived], "archived content")
 check("archive leaves colliding active note in place", disk.files["/state/sessions/data/S1/notes/" .. archive_path], "new content")
 
+for _, path in ipairs({ "limits/a", "limits/b" }) do
+  tool.handler({ command = "write", path = path, text = "needle\nneedle\nother" }, ctx)
+end
+local function contains(text, part)
+  return text:find(part, 1, true) ~= nil
+end
+local limited_list = tool.handler({ command = "list", prefix = "limits/", limit = 1 }, ctx)
+check("list reports omitted notes", contains(limited_list, "Showing 1 of 2 notes"), true)
+local exact_list = tool.handler({ command = "list", prefix = "limits/", limit = 2 }, ctx)
+check("list at limit without omissions is quiet", contains(exact_list, "Showing"), false)
+local limited_search = tool.handler({ command = "search", prefix = "limits/", query = "needle", max_files = 1, max_matches_per_file = 1 }, ctx)
+check("search reports matching-file limit", contains(limited_search, "Stopped after 1 matching file"), true)
+check("search reports per-file limit", contains(limited_search, "Showing the first 1 match in 1 file"), true)
+local exact_search = tool.handler({ command = "search", prefix = "limits/", query = "needle", max_files = 2, max_matches_per_file = 2 }, ctx)
+check("search at matching-file limit without omissions is quiet", contains(exact_search, "Stopped"), false)
+check("search at per-file limit without omissions is quiet", contains(exact_search, "Showing"), false)
+local root = "/state/sessions/data/S1/notes/"
+local helpers = require("notes_helpers")
+for i = 1, helpers.MAX_SCAN_FILES + 1 do
+  disk.files[root .. "scan/" .. i] = "no match"
+end
+local scan = tool.handler({ command = "search", prefix = "scan/", query = "needle" }, ctx)
+check("search reports scan limit even without matches", contains(scan, "Searched 100 of 101 files"), true)
+local long_query = tool.handler({ command = "search", prefix = "limits/", query = ("q"):rep(helpers.MAX_QUERY_CHARS + 1) }, ctx)
+check("search reports a shortened query", contains(long_query, "Query shortened to 1000 bytes"), true)
+for i = 1, helpers.MAX_SCAN_FILES + 1 do
+  disk.files[root .. "scan/" .. i] = nil
+end
+
 -- Without a state dir the reminder falls back to in-memory hysteresis.
 STATE.dir = nil
 restart()

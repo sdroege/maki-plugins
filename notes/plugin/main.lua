@@ -72,7 +72,11 @@ local function cmd_list(dir, input)
     local meta = maki.fs.metadata(maki.fs.joinpath(dir, path))
     entries[i] = { path = path, bytes = meta and meta.size or 0, mtime = meta and meta.mtime }
   end
-  return helpers.format_list(entries)
+  local out = helpers.format_list(entries)
+  if #entries < #files then
+    out = out .. ("\nShowing %d of %d notes."):format(#entries, #files)
+  end
+  return out
 end
 
 local function cmd_read(dir, input, ctx)
@@ -106,7 +110,7 @@ local function cmd_search(dir, input)
   end
   local max_files = helpers.clamp(input.max_files, helpers.MAX_SEARCH_FILES, helpers.MAX_SEARCH_FILES)
   local per_file = helpers.clamp(input.max_matches_per_file, helpers.MAX_MATCHES_PER_FILE, helpers.MAX_MATCHES_PER_FILE)
-  local groups, scanned = {}, 0
+  local groups, scanned, capped_files = {}, 0, 0
   for _, path in ipairs(files) do
     if #groups >= max_files or scanned >= helpers.MAX_SCAN_FILES then
       break
@@ -114,16 +118,30 @@ local function cmd_search(dir, input)
     scanned = scanned + 1
     local content = maki.fs.read(maki.fs.joinpath(dir, path))
     if content then
-      local matches = helpers.search_lines(path, content, query, per_file)
+      local matches, capped = helpers.search_lines(path, content, query, per_file)
+      if capped then
+        capped_files = capped_files + 1
+      end
       if #matches > 0 then
         groups[#groups + 1] = matches
       end
     end
   end
   local out = helpers.format_search(groups)
-  local hint = helpers.scan_capped_hint(scanned, #files)
-  if hint then
-    out = out .. "\n" .. hint
+  if #query < #input.query then
+    out = out .. ("\nQuery shortened to %d bytes."):format(#query)
+  end
+  if scanned < #files then
+    if #groups >= max_files then
+      out = out .. ("\nStopped after %d matching %s."):format(#groups, #groups == 1 and "file" or "files")
+    else
+      out = out .. ("\nSearched %d of %d files. Try narrowing by prefix."):format(scanned, #files)
+    end
+  end
+  if capped_files > 0 then
+    out = out .. ("\nShowing the first %d %s in %d %s."):format(
+      per_file, per_file == 1 and "match" or "matches", capped_files, capped_files == 1 and "file" or "files"
+    )
   end
   return out
 end

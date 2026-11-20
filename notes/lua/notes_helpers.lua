@@ -32,7 +32,6 @@ M.TOO_BIG_FMT = "note would exceed the %d byte per-file cap: start another note 
 M.CAP_READ_HINT = "Narrow the range with start_line/stop_line, or read a smaller note"
 M.CAP_READ_FMT = "... (output truncated at %d bytes. " .. M.CAP_READ_HINT .. ")"
 M.CAP_READ_TOTAL_FMT = "... (output truncated at %d bytes, %d lines total. " .. M.CAP_READ_HINT .. ")"
-M.SCAN_CAPPED_FMT = "... (searched the first %d of %d files. Narrow with a prefix)"
 
 local config = { remind_steps = M.DEFAULT_REMIND_STEPS, reminder_text = nil }
 
@@ -235,11 +234,14 @@ function M.search_lines(path, content, query, max_matches)
   local matches = {}
   local line_nr = 0
   local start = 1
-  while #matches < max_matches do
+  while true do
     local nl = content:find("\n", start, true)
     local line = content:sub(start, nl and nl - 1 or #content)
     line_nr = line_nr + 1
     if line:find(query, 1, true) then
+      if #matches == max_matches then
+        return matches, true
+      end
       matches[#matches + 1] = path .. ":" .. line_nr .. ": " .. line
     end
     if not nl then
@@ -247,7 +249,7 @@ function M.search_lines(path, content, query, max_matches)
     end
     start = nl + 1
   end
-  return matches
+  return matches, false
 end
 
 function M.format_search(groups)
@@ -261,15 +263,6 @@ function M.format_search(groups)
     return M.NO_MATCHES_MSG
   end
   return table.concat(lines, "\n")
-end
-
--- When the scan cap stops the search before every file was read, say so:
--- stopping silently would read as "no more matches".
-function M.scan_capped_hint(scanned, total)
-  if scanned >= M.MAX_SCAN_FILES and total > scanned then
-    return (M.SCAN_CAPPED_FMT):format(scanned, total)
-  end
-  return nil
 end
 
 function M.format_list(entries)

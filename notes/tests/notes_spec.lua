@@ -99,21 +99,17 @@ local matches = h.search_lines("notes.md", content, "alpha", 10)
 check("search finds all", #matches, 3)
 check("search formats", matches[1], "notes.md:1: alpha")
 check("search numbers lines", matches[3], "notes.md:5: alpha again")
-check("search respects cap", #h.search_lines("n.md", content, "a", 2), 2)
+local limited, capped = h.search_lines("n.md", content, "alpha", 2)
+check("search respects cap", #limited, 2)
+check("search reports omitted matches", capped, true)
+local exact, exact_capped = h.search_lines("n.md", content .. "\nlast line", "alpha", 3)
+check("search can find exactly the cap", #exact, 3)
+check("search does not report a limit without omissions", exact_capped, false)
 check("search no match", #h.search_lines("n.md", content, "zzz", 10), 0)
 
 -- format_search
 check("format empty groups", h.format_search({}), h.NO_MATCHES_MSG)
 check("format flattens groups", h.format_search({ { "a:1: x" }, { "b:2: y", "b:3: z" } }), "a:1: x\nb:2: y\nb:3: z")
-
--- scan_capped_hint
-check_nil("scan hint below cap", h.scan_capped_hint(10, 50))
-check_nil("scan hint at cap with nothing left", h.scan_capped_hint(h.MAX_SCAN_FILES, h.MAX_SCAN_FILES))
-check(
-  "scan hint at cap",
-  h.scan_capped_hint(h.MAX_SCAN_FILES, h.MAX_SCAN_FILES + 5),
-  (h.SCAN_CAPPED_FMT):format(h.MAX_SCAN_FILES, h.MAX_SCAN_FILES + 5)
-)
 
 -- format_list
 local zero_date = os.date("%Y-%m-%d %H:%M", 0)
