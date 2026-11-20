@@ -347,7 +347,7 @@ Never batch this call with others: the summary swallows their results before you
       return { llm_output = "Error: " .. err, is_error = true }
     end
     -- Kept short: this result is often inside what the summarizer reads.
-    return "Compaction queued. Your next request runs on the summary."
+    return "Compaction queued. Maki will show the summary, then resume with any saved notes listed in the reminder."
   end,
 })
 

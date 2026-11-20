@@ -233,7 +233,7 @@ check_nil("hint nil files", h.compact_hint(nil))
 check(
   "hint names files",
   h.compact_hint({ "a.md", "b.md" }),
-  "This session keeps notes that survive compaction unchanged: a.md, b.md. Include in your summary the note filenames and an instruction to run `notes list` and read the relevant notes before redoing any work (the summary alone can miss filenames). Do not copy note contents into the summary."
+  "This session keeps notes that survive compaction unchanged: a.md, b.md. In the summary, mention that the notes are available; do not copy their contents. Start directly with the summary, without a conversational preamble."
 )
 local many = {}
 for i = 1, h.HINT_LIST_CAP + 7 do
@@ -247,15 +247,13 @@ check_nil("post-compact nil files", h.post_compact_text(nil))
 check(
   "post-compact names files",
   h.post_compact_text({ "a.md", "b.md" }),
-  "Compaction just replaced this session's history with a summary, which can miss details. "
-    .. "Notes still saved: a.md, b.md. Read the relevant ones with the `notes` tool before doing any work "
-    .. "(e.g. `notes read <path>`, or `notes list` to see them all), then continue the task."
+  "The session was compacted. Read any relevant notes before retracing your steps.\n\nSaved notes:\n- a.md\n- b.md"
 )
 local many2 = {}
 for i = 1, h.HINT_LIST_CAP + 3 do
   many2[i] = "n" .. i .. ".md"
 end
-check("post-compact caps file list", h.post_compact_text(many2):match("n50%.md, and 3 more"), "n50.md, and 3 more")
+check("post-compact caps file list", h.post_compact_text(many2):match("n50%.md\nShowing 50 of 53 notes%."), "n50.md\nShowing 50 of 53 notes.")
 
 if failures > 0 then
   print(("\n%d test(s) failed"):format(failures))

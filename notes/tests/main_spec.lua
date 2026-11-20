@@ -420,12 +420,14 @@ check(
   true
 )
 check("read-back rides the same verdict", verdict.continue:find("a.md", 1, true) ~= nil, true)
-check("read-back says read first", verdict.continue:find("before doing any work", 1, true) ~= nil, true)
+check("read-back says read first", contains(verdict.continue, "Read any relevant notes before retracing your steps"), true)
+check("read-back includes the list", contains(verdict.continue, "Saved notes:\n- a.md\n- design/old.md"), true)
+check("read-back omits the archive", contains(verdict.continue, ".archive/"), false)
 check(
   "summary instructions name the notes",
   verdict.instructions
     and verdict.instructions:find("a.md", 1, true) ~= nil
-    and verdict.instructions:find("notes list", 1, true) ~= nil,
+    and verdict.instructions:find("Start directly with the summary", 1, true) ~= nil,
   true
 )
 check("the layer notifies nobody", #notifications, noted)
