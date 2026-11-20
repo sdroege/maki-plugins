@@ -124,6 +124,9 @@ function M.safe_path(path)
   if first == "/" or first == "\\" or path:match("^%a:") then
     return nil, M.PATH_ABSOLUTE_ERR
   end
+  if path == ".archive" or path:match("^%.archive[/\\]") then
+    return nil, "path is reserved for archived notes"
+  end
   local parts = {}
   local start = 1
   while true do

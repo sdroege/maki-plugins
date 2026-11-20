@@ -83,6 +83,14 @@ local function fs()
   function self.read(path)
     return disk.files[path]
   end
+  function self.rename(from, to)
+    if not disk.files[from] then
+      return nil, "not found: " .. from
+    end
+    disk.files[to] = disk.files[from]
+    disk.files[from] = nil
+    return true
+  end
   function self.rm(path, opts)
     if disk.files[path] or disk.dirs[path] then
       disk.files[path] = nil
@@ -317,6 +325,25 @@ check_nil("append works", out.is_error)
 local listing = tool.handler({ command = "list" }, ctx)
 check_nil("list hides the marker", listing:find(".reminder", 1, true))
 check("list shows the note", listing:find("a.md", 1, true) ~= nil, true)
+
+local archive_path = "design/old.md"
+local archived = "/state/sessions/data/S1/notes/.archive/" .. archive_path
+local function archive(path)
+  return tool.handler({ command = "archive", path = path }, ctx)
+end
+check("missing note cannot be archived", archive(archive_path).is_error, true)
+tool.handler({ command = "write", path = archive_path, text = "archived content" }, ctx)
+check("directory cannot be archived", archive("design").is_error, true)
+check("archive returns the original path", archive(archive_path), "archived " .. archive_path)
+check("archive preserves the contents", disk.files[archived], "archived content")
+check_nil("archive hides the note from list", tool.handler({ command = "list" }, ctx):find(archive_path, 1, true))
+check_nil("archive hides the note from search", tool.handler({ command = "search", query = "archived content" }, ctx):find(archive_path, 1, true))
+check("archive protects the reminder marker", archive(".reminder").is_error, true)
+check("archive paths are reserved", tool.handler({ command = "write", path = ".archive/" .. archive_path, text = "oops" }, ctx).is_error, true)
+tool.handler({ command = "write", path = archive_path, text = "new content" }, ctx)
+check("archive rejects collisions", archive(archive_path).is_error, true)
+check("archive does not replace a previous copy", disk.files[archived], "archived content")
+check("archive leaves colliding active note in place", disk.files["/state/sessions/data/S1/notes/" .. archive_path], "new content")
 
 -- Without a state dir the reminder falls back to in-memory hysteresis.
 STATE.dir = nil

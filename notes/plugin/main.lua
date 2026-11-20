@@ -157,6 +157,31 @@ local function write_out(dir, input, replace, ctx)
   }
 end
 
+local function cmd_archive(dir, input)
+  local path, err = helpers.safe_path(input.path)
+  if not path then
+    return nil, err
+  end
+  local from = maki.fs.joinpath(dir, path)
+  local meta = path:sub(1, 1) ~= "." and maki.fs.metadata(from)
+  if not meta or meta.is_dir then
+    return nil, "note not found: " .. path
+  end
+  local to = maki.fs.joinpath(dir, ".archive", path)
+  if maki.fs.metadata(to) then
+    return nil, "an archived note already exists at: " .. path
+  end
+  local ok, mkdir_err = maki.fs.mkdir(maki.fs.dirname(to), { parents = true })
+  if not ok then
+    return nil, mkdir_err
+  end
+  local moved, move_err = maki.fs.rename(from, to)
+  if not moved then
+    return nil, move_err
+  end
+  return "archived " .. path
+end
+
 maki.api.register_tool({
   name = "notes",
   description = [[Write session notes like you’re leaving a note for a coworker picking up the task. Give them the context they need to keep going and use their own judgment. When the user’s exact words say it better than a paraphrase, quote them directly. Use `memory` for things worth knowing beyond this session.
@@ -169,6 +194,7 @@ Files live under the session's notes dir and are deleted with the session.
 - `search query [prefix] [max_files] [max_matches_per_file]`: literal case-sensitive substring, reported as `path:line: text` lines.
 - `append path text`: append verbatim, creating the file and parent dirs. Concurrent appends interleave.
 - `write path text`: create or replace (last writer wins).
+- `archive path`: move a note out of the active list and search without deleting it. Archived files stay under `.archive/` in the session's notes directory.
 
 Paths are relative with no empty, '.', or '..' components, at most 8 levels deep. '~' is a literal name, never expanded. Limit-like args are clamped, never rejected. Each note is capped at 1 MiB, so start another file when one is full. There is no delete: the user removes notes via the /notes picker. Pass paths back exactly as list/search returned them.]],
 
@@ -177,7 +203,7 @@ Paths are relative with no empty, '.', or '..' components, at most 8 levels deep
     properties = {
       command = {
         type = "string",
-        enum = { "list", "read", "search", "append", "write" },
+        enum = { "list", "read", "search", "append", "write", "archive" },
         description = "The operation to run, see the command list above.",
         required = true,
       },
@@ -257,6 +283,8 @@ Paths are relative with no empty, '.', or '..' components, at most 8 levels deep
       result, err = write_out(dir, input, false, ctx)
     elseif cmd == "write" then
       result, err = write_out(dir, input, true, ctx)
+    elseif cmd == "archive" then
+      result, err = cmd_archive(dir, input)
     else
       err = "unknown command: " .. tostring(cmd)
     end
