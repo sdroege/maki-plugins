@@ -99,21 +99,17 @@ local matches = h.search_lines("notes.md", content, "alpha", 10)
 check("search finds all", #matches, 3)
 check("search formats", matches[1], "notes.md:1: alpha")
 check("search numbers lines", matches[3], "notes.md:5: alpha again")
-check("search respects cap", #h.search_lines("n.md", content, "a", 2), 2)
+local limited, capped = h.search_lines("n.md", content, "alpha", 2)
+check("search respects cap", #limited, 2)
+check("search reports omitted matches", capped, true)
+local exact, exact_capped = h.search_lines("n.md", content .. "\nlast line", "alpha", 3)
+check("search can find exactly the cap", #exact, 3)
+check("search does not report a limit without omissions", exact_capped, false)
 check("search no match", #h.search_lines("n.md", content, "zzz", 10), 0)
 
 -- format_search
 check("format empty groups", h.format_search({}), h.NO_MATCHES_MSG)
 check("format flattens groups", h.format_search({ { "a:1: x" }, { "b:2: y", "b:3: z" } }), "a:1: x\nb:2: y\nb:3: z")
-
--- scan_capped_hint
-check_nil("scan hint below cap", h.scan_capped_hint(10, 50))
-check_nil("scan hint at cap with nothing left", h.scan_capped_hint(h.MAX_SCAN_FILES, h.MAX_SCAN_FILES))
-check(
-  "scan hint at cap",
-  h.scan_capped_hint(h.MAX_SCAN_FILES, h.MAX_SCAN_FILES + 5),
-  (h.SCAN_CAPPED_FMT):format(h.MAX_SCAN_FILES, h.MAX_SCAN_FILES + 5)
-)
 
 -- format_list
 local zero_date = os.date("%Y-%m-%d %H:%M", 0)
@@ -237,7 +233,7 @@ check_nil("hint nil files", h.compact_hint(nil))
 check(
   "hint names files",
   h.compact_hint({ "a.md", "b.md" }),
-  "This session keeps notes that survive compaction unchanged: a.md, b.md. Include in your summary the note filenames and an instruction to run `notes list` and read the relevant notes before redoing any work (the summary alone can miss filenames). Do not copy note contents into the summary."
+  "This session keeps notes that survive compaction unchanged: a.md, b.md. In the summary, mention that the notes are available; do not copy their contents. Start directly with the summary, without a conversational preamble."
 )
 local many = {}
 for i = 1, h.HINT_LIST_CAP + 7 do
@@ -251,15 +247,13 @@ check_nil("post-compact nil files", h.post_compact_text(nil))
 check(
   "post-compact names files",
   h.post_compact_text({ "a.md", "b.md" }),
-  "Compaction just replaced this session's history with a summary, which can miss details. "
-    .. "Notes still saved: a.md, b.md. Read the relevant ones with the `notes` tool before doing any work "
-    .. "(e.g. `notes read <path>`, or `notes list` to see them all), then continue the task."
+  "The session was compacted. Read any relevant notes before retracing your steps.\n\nSaved notes:\n- a.md\n- b.md"
 )
 local many2 = {}
 for i = 1, h.HINT_LIST_CAP + 3 do
   many2[i] = "n" .. i .. ".md"
 end
-check("post-compact caps file list", h.post_compact_text(many2):match("n50%.md, and 3 more"), "n50.md, and 3 more")
+check("post-compact caps file list", h.post_compact_text(many2):match("n50%.md\nShowing 50 of 53 notes%."), "n50.md\nShowing 50 of 53 notes.")
 
 if failures > 0 then
   print(("\n%d test(s) failed"):format(failures))

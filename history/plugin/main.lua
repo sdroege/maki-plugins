@@ -175,7 +175,7 @@ Windows are `"current"` plus archive ids from `list_windows`. An archive is immu
       role = {
         type = "string",
         enum = { "user", "assistant" },
-        description = "Filter items by role.",
+        description = "Filter items by role. Use 'user' to find user text without tool results; omit role to include tool results.",
       },
       sub = {
         type = "string",

@@ -72,7 +72,11 @@ local function cmd_list(dir, input)
     local meta = maki.fs.metadata(maki.fs.joinpath(dir, path))
     entries[i] = { path = path, bytes = meta and meta.size or 0, mtime = meta and meta.mtime }
   end
-  return helpers.format_list(entries)
+  local out = helpers.format_list(entries)
+  if #entries < #files then
+    out = out .. ("\nShowing %d of %d notes."):format(#entries, #files)
+  end
+  return out
 end
 
 local function cmd_read(dir, input, ctx)
@@ -106,7 +110,7 @@ local function cmd_search(dir, input)
   end
   local max_files = helpers.clamp(input.max_files, helpers.MAX_SEARCH_FILES, helpers.MAX_SEARCH_FILES)
   local per_file = helpers.clamp(input.max_matches_per_file, helpers.MAX_MATCHES_PER_FILE, helpers.MAX_MATCHES_PER_FILE)
-  local groups, scanned = {}, 0
+  local groups, scanned, capped_files = {}, 0, 0
   for _, path in ipairs(files) do
     if #groups >= max_files or scanned >= helpers.MAX_SCAN_FILES then
       break
@@ -114,16 +118,30 @@ local function cmd_search(dir, input)
     scanned = scanned + 1
     local content = maki.fs.read(maki.fs.joinpath(dir, path))
     if content then
-      local matches = helpers.search_lines(path, content, query, per_file)
+      local matches, capped = helpers.search_lines(path, content, query, per_file)
+      if capped then
+        capped_files = capped_files + 1
+      end
       if #matches > 0 then
         groups[#groups + 1] = matches
       end
     end
   end
   local out = helpers.format_search(groups)
-  local hint = helpers.scan_capped_hint(scanned, #files)
-  if hint then
-    out = out .. "\n" .. hint
+  if #query < #input.query then
+    out = out .. ("\nQuery shortened to %d bytes."):format(#query)
+  end
+  if scanned < #files then
+    if #groups >= max_files then
+      out = out .. ("\nStopped after %d matching %s."):format(#groups, #groups == 1 and "file" or "files")
+    else
+      out = out .. ("\nSearched %d of %d files. Try narrowing by prefix."):format(scanned, #files)
+    end
+  end
+  if capped_files > 0 then
+    out = out .. ("\nShowing the first %d %s in %d %s."):format(
+      per_file, per_file == 1 and "match" or "matches", capped_files, capped_files == 1 and "file" or "files"
+    )
   end
   return out
 end
@@ -157,9 +175,34 @@ local function write_out(dir, input, replace, ctx)
   }
 end
 
+local function cmd_archive(dir, input)
+  local path, err = helpers.safe_path(input.path)
+  if not path then
+    return nil, err
+  end
+  local from = maki.fs.joinpath(dir, path)
+  local meta = path:sub(1, 1) ~= "." and maki.fs.metadata(from)
+  if not meta or meta.is_dir then
+    return nil, "note not found: " .. path
+  end
+  local to = maki.fs.joinpath(dir, ".archive", path)
+  if maki.fs.metadata(to) then
+    return nil, "an archived note already exists at: " .. path
+  end
+  local ok, mkdir_err = maki.fs.mkdir(maki.fs.dirname(to), { parents = true })
+  if not ok then
+    return nil, mkdir_err
+  end
+  local moved, move_err = maki.fs.rename(from, to)
+  if not moved then
+    return nil, move_err
+  end
+  return "archived " .. path
+end
+
 maki.api.register_tool({
   name = "notes",
-  description = [[Persistent, session-scoped notes for state that must survive compaction. Use this for anything that only matters in this session: task progress, intermediate results, file offsets, decisions, gotchas. Use the built-in memory tool only for knowledge useful in future sessions on this project. Per-session state there pollutes every later session.
+  description = [[Write session notes like you’re leaving a note for a coworker picking up the task. Give them the context they need to keep going and use their own judgment. When the user’s exact words say it better than a paraphrase, quote them directly. Use `memory` for things worth knowing beyond this session.
 
 Files live under the session's notes dir and are deleted with the session.
 
@@ -169,6 +212,7 @@ Files live under the session's notes dir and are deleted with the session.
 - `search query [prefix] [max_files] [max_matches_per_file]`: literal case-sensitive substring, reported as `path:line: text` lines.
 - `append path text`: append verbatim, creating the file and parent dirs. Concurrent appends interleave.
 - `write path text`: create or replace (last writer wins).
+- `archive path`: move a note out of the active list and search without deleting it. Archived files stay under `.archive/` in the session's notes directory.
 
 Paths are relative with no empty, '.', or '..' components, at most 8 levels deep. '~' is a literal name, never expanded. Limit-like args are clamped, never rejected. Each note is capped at 1 MiB, so start another file when one is full. There is no delete: the user removes notes via the /notes picker. Pass paths back exactly as list/search returned them.]],
 
@@ -177,7 +221,7 @@ Paths are relative with no empty, '.', or '..' components, at most 8 levels deep
     properties = {
       command = {
         type = "string",
-        enum = { "list", "read", "search", "append", "write" },
+        enum = { "list", "read", "search", "append", "write", "archive" },
         description = "The operation to run, see the command list above.",
         required = true,
       },
@@ -257,6 +301,8 @@ Paths are relative with no empty, '.', or '..' components, at most 8 levels deep
       result, err = write_out(dir, input, false, ctx)
     elseif cmd == "write" then
       result, err = write_out(dir, input, true, ctx)
+    elseif cmd == "archive" then
+      result, err = cmd_archive(dir, input)
     else
       err = "unknown command: " .. tostring(cmd)
     end
@@ -301,13 +347,13 @@ Never batch this call with others: the summary swallows their results before you
       return { llm_output = "Error: " .. err, is_error = true }
     end
     -- Kept short: this result is often inside what the summarizer reads.
-    return "Compaction queued. Your next request runs on the summary."
+    return "Compaction queued. Maki will show the summary, then resume with any saved notes listed in the reminder."
   end,
 })
 
 maki.api.register_prompt_hint({
   slot = "tool_usage",
-  content = "- Save session state that must survive compaction to **notes**, appending right after each milestone (a passing test, a design decision, a discovered layout). Use **memory** only for knowledge useful in future sessions on this project. Read notes back after a compaction before redoing work.",
+  content = "- Update `notes` when something changes what you’d tell a coworker picking up the task. After compaction, read the relevant notes before retracing your steps.",
 })
 
 maki.api.register_prompt_hint({
