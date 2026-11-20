@@ -159,7 +159,7 @@ end
 
 maki.api.register_tool({
   name = "notes",
-  description = [[Persistent, session-scoped notes for state that must survive compaction. Use this for anything that only matters in this session: task progress, intermediate results, file offsets, decisions, gotchas. Use the built-in memory tool only for knowledge useful in future sessions on this project. Per-session state there pollutes every later session.
+  description = [[Write session notes like you’re leaving a note for a coworker picking up the task. Give them the context they need to keep going and use their own judgment. When the user’s exact words say it better than a paraphrase, quote them directly. Use `memory` for things worth knowing beyond this session.
 
 Files live under the session's notes dir and are deleted with the session.
 
@@ -307,7 +307,7 @@ Never batch this call with others: the summary swallows their results before you
 
 maki.api.register_prompt_hint({
   slot = "tool_usage",
-  content = "- Save session state that must survive compaction to **notes**, appending right after each milestone (a passing test, a design decision, a discovered layout). Use **memory** only for knowledge useful in future sessions on this project. Read notes back after a compaction before redoing work.",
+  content = "- Update `notes` when something changes what you’d tell a coworker picking up the task. After compaction, read the relevant notes before retracing your steps.",
 })
 
 maki.api.register_prompt_hint({
