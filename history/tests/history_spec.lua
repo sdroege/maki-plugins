@@ -279,6 +279,33 @@ check(
 check("search no match", h.format_search(two_windows, { query = "zzz", limit = 20 }), h.NO_MATCHES_MSG)
 check("search case sensitive", h.format_search(two_windows, { query = "Deploy", limit = 20 }), h.NO_MATCHES_MSG)
 
+local result_block = { type = "tool_result", tool_use_id = "call_1", content = "deploy from tool output" }
+local noisy_window = window("current", {
+  { role = "user", content = { result_block } },
+  { role = "user", content = { result_block, { type = "text", text = "deploy my changes" } } },
+})
+local noisy_items = h.flatten_items(noisy_window)
+check(
+  "user listing skips tool results without using up the limit",
+  h.format_items("current", noisy_items, { role = "user", limit = 1, max_chars_per_item = 200 }),
+  "current/2, user, deploy my changes"
+)
+check(
+  "user search skips tool results without using up the limit",
+  h.format_search({ noisy_window }, { query = "deploy", role = "user", limit = 1 }),
+  "current/2, user, deploy my changes"
+)
+check(
+  "user search does not match tool output in a mixed item",
+  h.format_search({ noisy_window }, { query = "from tool output", role = "user", limit = 20 }),
+  h.NO_MATCHES_MSG
+)
+check(
+  "unfiltered search still finds tool results",
+  h.format_search({ noisy_window }, { query = "from tool output", limit = 1 }),
+  "current/1, user, tool_result: deploy from tool output"
+)
+
 -- prepare_query / clamp
 check("query passes through", h.prepare_query("find me"), "find me")
 check("query truncated to cap", h.prepare_query(("q"):rep(h.MAX_QUERY_CHARS + 10)), ("q"):rep(h.MAX_QUERY_CHARS))

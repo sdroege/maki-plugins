@@ -140,7 +140,7 @@ function M.serialize(v)
   return "{" .. table.concat(parts, ", ") .. "}"
 end
 
-function M.render_message(msg)
+function M.render_message(msg, skip_tool_results)
   local parts = {}
   for _, block in ipairs(msg.content or {}) do
     local t = block.type
@@ -153,7 +153,9 @@ function M.render_message(msg)
     elseif t == "tool_use" then
       parts[#parts + 1] = "tool_use " .. block.name .. ": " .. M.serialize(block.input)
     elseif t == "tool_result" then
-      parts[#parts + 1] = "tool_result" .. (block.is_error and " (error)" or "") .. ": " .. block.content
+      if not skip_tool_results then
+        parts[#parts + 1] = "tool_result" .. (block.is_error and " (error)" or "") .. ": " .. block.content
+      end
     elseif t == "image" then
       parts[#parts + 1] = "[image omitted]"
     else
@@ -192,16 +194,26 @@ local function item_label(window_id, item)
   return window_id .. "/" .. item.id .. ", " .. item.role .. sub
 end
 
+local function filtered_text(item, opts)
+  if (opts.role and item.role ~= opts.role) or (opts.sub and item.sub ~= opts.sub) then
+    return nil
+  end
+  local text = M.render_message(item, opts.role == "user")
+  if opts.role == "user" and text == "" then
+    return nil
+  end
+  return text
+end
+
 function M.format_items(window_id, items, opts)
   local lines = {}
   for _, item in ipairs(items) do
     if #lines >= opts.limit then
       break
     end
-    if (not opts.role or item.role == opts.role) and (not opts.sub or item.sub == opts.sub) then
-      lines[#lines + 1] = item_label(window_id, item)
-        .. ", "
-        .. M.preview(M.render_message(item), opts.max_chars_per_item)
+    local text = filtered_text(item, opts)
+    if text then
+      lines[#lines + 1] = item_label(window_id, item) .. ", " .. M.preview(text, opts.max_chars_per_item)
     end
   end
   if #lines == 0 then
@@ -274,8 +286,8 @@ function M.format_search(windows, opts)
         if #lines >= opts.limit then
           break
         end
-        if (not opts.role or item.role == opts.role) and (not opts.sub or item.sub == opts.sub) then
-          local rendered = M.render_message(item)
+        local rendered = filtered_text(item, opts)
+        if rendered then
           local s, e = rendered:find(opts.query, 1, true)
           if s then
             -- Count the rest of the matches so the model knows whether one
