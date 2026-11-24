@@ -26,7 +26,7 @@ M.PATH_REQUIRED_ERR = "path is required"
 M.PATH_ABSOLUTE_ERR = "path must be relative"
 M.PATH_INVALID_ERR = "path must not contain empty, '.', or '..' components"
 M.PATH_TOO_DEEP_FMT = "path is too deep (max %d components)"
-M.TEXT_REQUIRED_ERR = "text is required"
+M.CONTENT_REQUIRED_ERR = "content is required"
 M.QUERY_REQUIRED_ERR = "query is required"
 M.TOO_BIG_FMT = "note would exceed the %d byte per-file cap: start another note file"
 M.CAP_READ_HINT = "Narrow the range with start_line/stop_line, or read a smaller note"
@@ -284,11 +284,11 @@ function M.format_list(entries)
   return table.concat(lines, "\n")
 end
 
-function M.check_size(existing_bytes, text)
-  if type(text) ~= "string" or text == "" then
-    return M.TEXT_REQUIRED_ERR
+function M.check_size(existing_bytes, content)
+  if type(content) ~= "string" or content == "" then
+    return M.CONTENT_REQUIRED_ERR
   end
-  if existing_bytes + #text > M.MAX_FILE_BYTES then
+  if existing_bytes + #content > M.MAX_FILE_BYTES then
     return M.TOO_BIG_FMT:format(M.MAX_FILE_BYTES)
   end
   return nil

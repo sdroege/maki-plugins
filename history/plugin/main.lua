@@ -180,6 +180,10 @@ Windows are `"current"` plus archive ids from `list_windows`. An archive is immu
       sub = {
         type = "string",
         description = 'Filter items by thread: "main" or a subagent name.',
+        -- The description says "thread", and models answer that instead of the
+        -- terse key. Undeclared keys are dropped, not rejected, so without the
+        -- alias the filter would silently widen to every thread.
+        alias = { "thread", "subagent" },
       },
       limit = {
         type = "integer",

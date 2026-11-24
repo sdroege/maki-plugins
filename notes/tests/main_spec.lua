@@ -27,6 +27,9 @@ end
 local disk = { files = {}, dirs = {} }
 local STATE = { dir = "/state" }
 local notifications = {}
+-- What the ToolView stub was asked to render, newest last.
+local viewed = {}
+local exts = {}
 
 local function fs()
   local self = {}
@@ -149,7 +152,9 @@ package.preload["maki.tool_view"] = function()
   return {
     new = function()
       return {
-        set_highlight = function()
+        set_highlight = function(_, text, ext)
+          viewed[#viewed + 1] = text
+          exts[#exts + 1] = ext
           return false
         end,
         append_text = function() end,
@@ -310,13 +315,45 @@ check_nil("stale marker cleared", disk.files[marker("S1")])
 turncomplete("S1", 42, 100)
 check("fires after stale clear", #notifications, 12)
 
--- The marker never surfaces as a note.
+-- The marker never surfaces as a note. `text` is the name this tool advertised
+-- before it took maki's `content`, so it is the legacy spelling proven here.
 local tool = api.tools["notes"]
 local out = tool.handler({ command = "append", path = "a.md", text = "hello" }, ctx)
 check_nil("append works", out.is_error)
 local listing = tool.handler({ command = "list" }, ctx)
 check_nil("list hides the marker", listing:find(".reminder", 1, true))
 check("list shows the note", listing:find("a.md", 1, true) ~= nil, true)
+
+-- Both spellings reach the disk under either name. A live call arrives with the
+-- canonical keys because the host resolves the schema aliases before the handler
+-- runs, so the fake host exercises the plugin's own raw-input fallbacks.
+local NOTES = "/state/sessions/data/S1/notes/"
+check("content is canonical", type(tool.schema.properties.content), "table")
+check("content keeps the legacy name", tool.schema.properties.content.alias, "text")
+check("path is canonical", type(tool.schema.properties.path), "table")
+check("path takes maki's alias", tool.schema.properties.path.alias, "file_path")
+check_nil(
+  "append through file_path",
+  tool.handler({ command = "append", file_path = "alias.md", content = "via alias" }, ctx).is_error
+)
+check("append reached the file", disk.files[NOTES .. "alias.md"], "via alias")
+check_nil(
+  "write through the legacy text",
+  tool.handler({ command = "write", path = "alias.md", text = "replaced" }, ctx).is_error
+)
+check("write replaced the body", disk.files[NOTES .. "alias.md"], "replaced")
+check(
+  "no body at all errors",
+  tool.handler({ command = "write", path = "x.md" }, ctx).is_error,
+  true
+)
+
+-- `header` and `restore` see the raw model input on rerender and session load,
+-- where no alias is resolved.
+check("header reads the aliased path", tool.header({ command = "append", file_path = "alias.md" }), "append alias.md")
+tool.restore({ command = "write", file_path = "alias.md", content = "replaced" }, "wrote alias.md", false, ctx)
+check("restore renders the legacy body", viewed[#viewed], "replaced")
+check("restore highlights the aliased path", exts[#exts], "md")
 
 -- Without a state dir the reminder falls back to in-memory hysteresis.
 STATE.dir = nil

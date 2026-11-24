@@ -132,8 +132,8 @@ check("list nil mtime", h.format_list({ { path = "a.md", bytes = 1, mtime = nil 
 check_nil("size under cap", h.check_size(0, ("x"):rep(h.MAX_FILE_BYTES)))
 check("size over cap", h.check_size(0, ("x"):rep(h.MAX_FILE_BYTES + 1)), h.TOO_BIG_FMT:format(h.MAX_FILE_BYTES))
 check("append over cap", h.check_size(h.MAX_FILE_BYTES - 5, "xxxxxx"), h.TOO_BIG_FMT:format(h.MAX_FILE_BYTES))
-check("empty text rejected", h.check_size(0, ""), h.TEXT_REQUIRED_ERR)
-check("nil text rejected", h.check_size(0, nil), h.TEXT_REQUIRED_ERR)
+check("empty content rejected", h.check_size(0, ""), h.CONTENT_REQUIRED_ERR)
+check("nil content rejected", h.check_size(0, nil), h.CONTENT_REQUIRED_ERR)
 
 -- should_remind hysteresis
 local steps = { 0.3, 0.6, 0.8 }

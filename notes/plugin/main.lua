@@ -6,6 +6,19 @@ local Toast = require("maki.toast")
 -- Matches safe_path's component cap, so every valid path is listable.
 local WALK_DEPTH = helpers.MAX_PATH_DEPTH
 
+-- The host rewrites the schema aliases onto their canonical keys before the
+-- handler runs, but `header` and `restore` are handed the raw model input on a
+-- rerender or a session load, and both names stay accepted for old transcripts.
+local function arg_path(input)
+  return input.path or input.file_path
+end
+
+-- `content` is maki's word for a body, what `write` and `memory` call it. `text`
+-- is what this tool advertised first.
+local function arg_body(input)
+  return input.content or input.text
+end
+
 local function render_content(content, path, ctx)
   local buf = maki.ui.buf()
   local tol = ctx:tool_output_lines()
@@ -76,7 +89,7 @@ local function cmd_list(dir, input)
 end
 
 local function cmd_read(dir, input, ctx)
-  local path, perr = helpers.safe_path(input.path)
+  local path, perr = helpers.safe_path(arg_path(input))
   if not path then
     return nil, perr
   end
@@ -129,12 +142,13 @@ local function cmd_search(dir, input)
 end
 
 local function write_out(dir, input, replace, ctx)
-  local path, perr = helpers.safe_path(input.path)
+  local path, perr = helpers.safe_path(arg_path(input))
   if not path then
     return nil, perr
   end
+  local body = arg_body(input)
   local existing = maki.fs.metadata(maki.fs.joinpath(dir, path))
-  local err = helpers.check_size(replace and 0 or (existing and existing.size or 0), input.text)
+  local err = helpers.check_size(replace and 0 or (existing and existing.size or 0), body)
   if err then
     return nil, err
   end
@@ -144,16 +158,16 @@ local function write_out(dir, input, replace, ctx)
     return nil, merr
   end
   if replace then
-    ok, err = maki.fs.write(full, input.text)
+    ok, err = maki.fs.write(full, body)
   else
-    ok, err = maki.fs.append(full, input.text)
+    ok, err = maki.fs.append(full, body)
   end
   if not ok then
     return nil, err
   end
   return {
     llm_output = (replace and "wrote " or "appended to ") .. path,
-    body = render_content(input.text, path, ctx),
+    body = render_content(body, path, ctx),
   }
 end
 
@@ -167,8 +181,8 @@ Files live under the session's notes dir and are deleted with the session.
 - `list [prefix] [limit]`: note paths with size and mtime.
 - `read path [start_line] [stop_line]`: whole file, or a 1-based inclusive line range.
 - `search query [prefix] [max_files] [max_matches_per_file]`: literal case-sensitive substring, reported as `path:line: text` lines.
-- `append path text`: append verbatim, creating the file and parent dirs. Concurrent appends interleave.
-- `write path text`: create or replace (last writer wins).
+- `append path content`: append verbatim, creating the file and parent dirs. Concurrent appends interleave.
+- `write path content`: create or replace (last writer wins).
 
 Paths are relative with no empty, '.', or '..' components, at most 8 levels deep. '~' is a literal name, never expanded. Limit-like args are clamped, never rejected. Each note is capped at 1 MiB, so start another file when one is full. There is no delete: the user removes notes via the /notes picker. Pass paths back exactly as list/search returned them.]],
 
@@ -184,10 +198,16 @@ Paths are relative with no empty, '.', or '..' components, at most 8 levels deep
       path = {
         type = "string",
         description = "Relative note path, e.g. 'decisions.md'.",
+        -- What maki's file tools accept as an alternative name for the path.
+        alias = "file_path",
       },
-      text = {
+      content = {
         type = "string",
         description = "Content for append/write, appended verbatim.",
+        -- The name this tool advertised before it took `content`, maki's word
+        -- for a body. Kept forever: old session transcripts hold `text`, and
+        -- `restore` replays that raw input.
+        alias = "text",
       },
       query = {
         type = "string",
@@ -222,8 +242,9 @@ Paths are relative with no empty, '.', or '..' components, at most 8 levels deep
 
   header = function(input)
     local parts = { input.command or "" }
-    if input.path then
-      parts[#parts + 1] = input.path
+    local path = arg_path(input)
+    if path then
+      parts[#parts + 1] = path
     elseif input.query then
       parts[#parts + 1] = input.query
     end
@@ -231,8 +252,9 @@ Paths are relative with no empty, '.', or '..' components, at most 8 levels deep
   end,
 
   restore = function(input, output, _is_error, ctx)
-    local content = (input.command == "append" or input.command == "write") and input.text or output
-    return render_content(content, input.path, ctx)
+    local body = arg_body(input)
+    local content = (input.command == "append" or input.command == "write") and body or output
+    return render_content(content, arg_path(input), ctx)
   end,
 
   handler = function(input, ctx)
