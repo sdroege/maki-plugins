@@ -153,6 +153,7 @@ Windows are `"current"` plus archive ids from `list_windows`. An archive is immu
       command = {
         type = "string",
         enum = { "list_windows", "list_items", "read_item", "search" },
+        hint = "Pass command as its own string field: list_windows, list_items, read_item or search.",
         description = "The operation to run, see the command list above.",
         required = true,
       },

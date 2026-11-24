@@ -192,6 +192,7 @@ Paths are relative with no empty, '.', or '..' components, at most 8 levels deep
       command = {
         type = "string",
         enum = { "list", "read", "search", "append", "write" },
+        hint = "Pass command as its own string field: list, read, search, append or write. notes has no edit, so read a note and write it back to change it.",
         description = "The operation to run, see the command list above.",
         required = true,
       },

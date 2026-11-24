@@ -316,6 +316,37 @@ check(
   "a\n\n[truncated 0 bytes]\n" .. (h.TRUNCATION_TOTAL_FMT):format(2)
 )
 
+-- The tool schema, loaded with a stub host. Builds that predate schema hints
+-- ignore the key, so this proves the declaration, not the error text.
+package.preload["maki.tool_view"] = function()
+  return {}
+end
+package.preload["maki.output_limits"] = function()
+  return {}
+end
+package.preload["maki.truncate"] = function()
+  return {}
+end
+local api = { tools = {}, slots = {} }
+_G.maki = {
+  api = {
+    register_tool = function(tool)
+      api.tools[tool.name] = tool
+    end,
+    register_prompt_hint = function() end,
+    set_slot = function(name, fn)
+      api.slots[name] = fn
+    end,
+  },
+}
+dofile("plugin/main.lua")
+local tool = api.tools["history"]
+check(
+  "command hint names the commands",
+  tool.schema.properties.command.hint:find("list_windows, list_items, read_item or search", 1, true) ~= nil,
+  true
+)
+
 if failures > 0 then
   print(("\n%d test(s) failed"):format(failures))
   os.exit(1)

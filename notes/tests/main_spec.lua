@@ -332,6 +332,12 @@ check("content is canonical", type(tool.schema.properties.content), "table")
 check("content keeps the legacy name", tool.schema.properties.content.alias, "text")
 check("path is canonical", type(tool.schema.properties.path), "table")
 check("path takes maki's alias", tool.schema.properties.path.alias, "file_path")
+check(
+  "command hint names the commands",
+  tool.schema.properties.command.hint:find("list, read, search, append or write", 1, true) ~= nil,
+  true
+)
+check("command hint points away from edit", tool.schema.properties.command.hint:find("no edit", 1, true) ~= nil, true)
 check_nil(
   "append through file_path",
   tool.handler({ command = "append", file_path = "alias.md", content = "via alias" }, ctx).is_error
