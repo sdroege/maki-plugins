@@ -350,7 +350,7 @@ function M.compact_hint(paths)
   return "This session keeps notes that survive compaction unchanged: "
     .. table.concat(names, ", ")
     .. suffix
-    .. ". Include in your summary the note filenames and an instruction to run `notes list` and read the relevant notes before redoing any work (the summary alone can miss filenames). Do not copy note contents into the summary."
+    .. ". Include in your summary the note filenames and an instruction to list them with the `notes` tool and read the relevant ones before redoing any work (the summary alone can miss filenames). Do not copy note contents into the summary."
 end
 
 -- Returned as `continue` from agent.compact.before on the pass that lets the
@@ -376,7 +376,7 @@ function M.post_compact_text(paths)
     .. table.concat(names, ", ")
     .. suffix
     .. ". Read the relevant ones with the `notes` tool before doing any work "
-    .. "(e.g. `notes read <path>`, or `notes list` to see them all), then continue the task."
+    .. "(command `read` with a `path`, or `list` to see them all), then continue the task."
 end
 
 return M

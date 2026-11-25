@@ -237,7 +237,7 @@ check_nil("hint nil files", h.compact_hint(nil))
 check(
   "hint names files",
   h.compact_hint({ "a.md", "b.md" }),
-  "This session keeps notes that survive compaction unchanged: a.md, b.md. Include in your summary the note filenames and an instruction to run `notes list` and read the relevant notes before redoing any work (the summary alone can miss filenames). Do not copy note contents into the summary."
+  "This session keeps notes that survive compaction unchanged: a.md, b.md. Include in your summary the note filenames and an instruction to list them with the `notes` tool and read the relevant ones before redoing any work (the summary alone can miss filenames). Do not copy note contents into the summary."
 )
 local many = {}
 for i = 1, h.HINT_LIST_CAP + 7 do
@@ -253,7 +253,16 @@ check(
   h.post_compact_text({ "a.md", "b.md" }),
   "Compaction just replaced this session's history with a summary, which can miss details. "
     .. "Notes still saved: a.md, b.md. Read the relevant ones with the `notes` tool before doing any work "
-    .. "(e.g. `notes read <path>`, or `notes list` to see them all), then continue the task."
+    .. "(command `read` with a `path`, or `list` to see them all), then continue the task."
+)
+
+-- XML-dialect models copy a `tool subcommand` spelling into <function=NAME> and their call
+-- is then dropped as text, so the prompts name the fields instead of showing a call.
+local prompted = h.compact_hint({ "a.md" }) .. h.post_compact_text({ "a.md" })
+check(
+  "prompts never spell notes read or notes list",
+  prompted:find("notes read", 1, true) == nil and prompted:find("notes list", 1, true) == nil,
+  true
 )
 local many2 = {}
 for i = 1, h.HINT_LIST_CAP + 3 do

@@ -412,7 +412,7 @@ check(
   "summary instructions name the notes",
   verdict.instructions
     and verdict.instructions:find("a.md", 1, true) ~= nil
-    and verdict.instructions:find("notes list", 1, true) ~= nil,
+    and verdict.instructions:find("with the `notes` tool", 1, true) ~= nil,
   true
 )
 check("the layer notifies nobody", #notifications, noted)
