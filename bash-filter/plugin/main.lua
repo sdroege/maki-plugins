@@ -1,10 +1,12 @@
 local git_diff = require("git_diff")
+local git_c = require("git_c")
 local rg = require("rg")
 local safe_sed = require("safe_sed")
 local blocked_hosts = require("blocked_hosts")
 
 local FILTERS = {
   git_diff.filter,
+  git_c.filter,
   rg.filter,
   blocked_hosts.filter,
 }

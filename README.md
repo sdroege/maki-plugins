@@ -9,7 +9,7 @@ manifest, and its own README.
 
 | Plugin | What it adds | Requires |
 | --- | --- | --- |
-| [`bash-filter`](bash-filter/) | Rejects patch-printing `git diff` calls that omit `--no-ext-diff` and `rg` calls that use replacement mode or run external commands, and auto-allows whitelisted read-only `sed` print commands. | maki 0.5.0 |
+| [`bash-filter`](bash-filter/) | Rejects patch-printing `git diff` calls that omit `--no-ext-diff`, `git -C` calls that point git at another directory, and `rg` calls that use replacement mode or run external commands, and auto-allows whitelisted read-only `sed` print commands. | maki 0.5.0 |
 | [`greenpt`](greenpt/) | The `greenpt` provider, with a curated model table for GreenPT's OpenAI-compatible API. | maki 0.6.0 |
 | [`history`](history/) | A `history` tool that lets the model read its own transcript, including archived pre-compaction windows and subagent transcripts. | maki 0.7.2 |
 | [`inference-coop`](inference-coop/) | The `inference-coop` provider, a member-governed gateway in front of Tinfoil, GreenPT and Regolo. | maki 0.6.0 |
@@ -25,12 +25,14 @@ for it. `history` works with released maki 0.7.2.
 
 A safety and convenience layer. It hooks maki's bash input slot and rejects a
 `git diff` that would print a full external-diff patch, pointing at the same
-command with `--no-ext-diff`. It also rejects `rg -r` (and `--replace`), which
-is replacement mode rather than recursive search, plus `rg --pre` and
-`rg --hostname-bin`, which run external commands hidden inside an argument.
-Finally, it hooks the permission prompt and auto-accepts `sed` invocations
-whose script only prints (`[addr[,addr]]p`), provided the shell cannot rewrite
-the script on the way to `sed`.
+command with `--no-ext-diff`. It also rejects `git -C <dir>`, which points git
+at a directory other than the shell's, with a hint to call the bash tool with
+that directory as its `workdir` parameter instead. It also rejects `rg -r`
+(and `--replace`), which is replacement mode rather than recursive search, plus
+`rg --pre` and `rg --hostname-bin`, which run external commands hidden inside
+an argument. Finally, it hooks the permission prompt and auto-accepts `sed`
+invocations whose script only prints (`[addr[,addr]]p`), provided the shell
+cannot rewrite the script on the way to `sed`.
 
 ### greenpt
 
