@@ -75,6 +75,8 @@ else
     { "sudo rg -r foo", { "--replace", "recursively" } },
     { "/usr/bin/rg -r foo", { "--replace", "recursively" } },
     { "rg -r foo && rg --pre cat bar", { "--replace", "recursively" } },
+    { "rg --glob '*.lua' -r", { "--replace", "recursively" } },
+    { "rg --glob \"*.lua\" -r foo", { "--replace", "recursively" } },
   }
 
   local allow_cases = {

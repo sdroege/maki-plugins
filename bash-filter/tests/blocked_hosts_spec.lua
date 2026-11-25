@@ -104,6 +104,7 @@ else
     'curl -sSL "' .. URL .. '" -o /tmp/f',
     "wget " .. URL,
     "wget2 -q " .. URL,
+    "curl '" .. URL .. "' -o /tmp/f",
     "sudo curl " .. URL,
     "curl " .. URL .. " | jq .",
     "/usr/bin/curl " .. URL,

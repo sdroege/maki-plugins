@@ -52,6 +52,8 @@ local allow_cases = {
   "git diff --no-ext-diff",
   "git diff --ext-diff main..HEAD",
   "git diff --stat main..HEAD",
+  "git diff '-q' main..HEAD",
+  "git diff \"--stat\" main..HEAD",
   "git diff -q main..HEAD",
   "git status",
   "echo git diff",

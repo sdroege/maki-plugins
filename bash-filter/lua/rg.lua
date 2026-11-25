@@ -154,7 +154,8 @@ local function collect_tokens(node, source)
           tokens[#tokens + 1] = { text = unquote(node_text(inner, source)), node = inner }
         end
       end
-    elseif kind == "word" or kind == "string" or kind == "concatenated_string" then
+    elseif kind == "word" or kind == "string" or kind == "raw_string"
+      or kind == "concatenated_string" then
       tokens[#tokens + 1] = { text = unquote(node_text(child, source)), node = child }
     end
   end
