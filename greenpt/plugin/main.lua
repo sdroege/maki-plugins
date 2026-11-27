@@ -1,10 +1,13 @@
--- GreenPT, an OpenAI-compatible endpoint with no API for model metadata, so
--- the curated table is the catalogue and `list_models` only drops an id the
--- API no longer lists. Model list, prices, context windows and limits come
--- from https://docs.greenpt.ai/model-cards (the "Model changes" list there
--- tracks every release, price change and deprecation) and
--- https://docs.greenpt.ai/models for what `GET /v1/models` answers. Keep the
--- table in sync with the recommended catalogue when those pages change. A
+-- GreenPT, an OpenAI-compatible endpoint whose `GET /v1/models` lists ids
+-- without any metadata, so the curated table is the catalogue and
+-- `list_models` drops an id the API no longer lists and overlays the live
+-- rates, context windows and output caps of `GET /v1/pricing` (documented at
+-- https://docs.greenpt.ai/regions; per-endpoint figures, so the region of the
+-- base URL decides what it answers). Everything no endpoint describes, the
+-- tiers, vision and thinking ladders above all, comes from
+-- https://docs.greenpt.ai/model-cards (the "Model changes" list there
+-- tracks every release, price change and deprecation). Keep the table in
+-- sync with the recommended catalogue when those pages change. A
 -- "New model" line in the Model changes list is only curatable once a model
 -- card backs it and /v1/models lists the id as a chat model: the metis entry
 -- of 30 September 2026 now has a card, but it is a decision model called
@@ -17,12 +20,20 @@
 local parse = require("maki.provider_parse")
 
 local MODELS_PATH = "/models"
+local PRICING_PATH = "/pricing"
 local AGENTS_PATH = "/agents"
 local API_KEY_ENV = "GREENPT_API_KEY"
 
--- Prices are GreenPT's list in EUR per 1M tokens, from the model cards page;
--- the factor below turns them into maki's dollars. GreenPT bills no cache
--- write, so cache_write is 0.0. It enables reasoning by default: omitting the
+-- The key-free SDMX feed for the euro's daily reference rate in US dollars:
+-- one series, one observation, asked for with lastNObservations=1.
+local FX_URL =
+  "https://data-api.ecb.europa.eu/service/data/EXR/D.USD.EUR.SP00.A?lastNObservations=1&format=jsondata"
+
+-- The prices in the rows are GreenPT's list in EUR per 1M tokens, from the
+-- model cards page, and serve as the offline fallback: `list_models`
+-- overlays the live figures of `/pricing`, converted at the ECB rate the
+-- listing fetched. GreenPT bills no cache write, so cache_write is 0.0. It
+-- enables reasoning by default: omitting the
 -- effort field leaves thinking on. No built-in effort dialect matches that shape
 -- (off must send "none" and the levels run minimal..high, while "standard"
 -- omits the field on off and every other dialect misses levels or adds ones
@@ -40,21 +51,63 @@ local function efforts(...)
   return fields
 end
 
--- The one place GreenPT's EUR becomes maki's dollars, so a rate review is one
--- edit and never means recomputing a row by hand. 1.0975 is the European Central
--- Bank's daily euro reference rate of 26 November 2026; GreenPT bills in EUR and
--- publishes no USD list, so that series is the one to follow. Refresh it on a
--- table sync, where the cost lines make a drift visible.
+-- The one place GreenPT's EUR becomes maki's dollars, so a rate review never
+-- means recomputing a row by hand. Listings convert at the ECB's daily euro
+-- reference rate, which `live_rate` fetches fresh; GreenPT bills in EUR and
+-- publishes no USD list, so that series is the one to follow. The pin below
+-- is the fallback for a listing whose fetch did not answer, and what the
+-- rows registered at startup carry. Refresh it on a table sync, where the
+-- cost lines make a drift visible.
 -- https://data-api.ecb.europa.eu/service/data/EXR/D.USD.EUR.SP00.A
 local EUR_TO_USD = 1.0975
+
+-- The rate rides the first value of the one observation of the one series the
+-- query asks for. Nil on any surprise, so a chatty feed cannot crash a
+-- listing or price it at zero.
+local function ecb_rate(body)
+  local sets = type(body) == "table" and body.dataSets
+  local set = type(sets) == "table" and sets[1]
+  local series = type(set) == "table" and set.series
+  if type(series) ~= "table" then
+    return nil
+  end
+  for _, entry in pairs(series) do
+    local observations = type(entry) == "table" and entry.observations
+    if type(observations) == "table" then
+      for _, observation in pairs(observations) do
+        local rate = type(observation) == "table" and parse.as_f64(observation[1])
+        if rate and rate > 0 then
+          return rate
+        end
+      end
+    end
+  end
+  return nil
+end
+
+-- A fresh rate per call. It goes out through maki.net.request rather than
+-- ctx.get_json because no GreenPT key belongs in an ECB request, and every
+-- failure path lands on nil so the caller falls back to the pin.
+local function live_rate()
+  local res, err = maki.net.request(FX_URL)
+  if err or not res or res.status >= 400 then
+    return nil
+  end
+  local body, derr = maki.json.decode(res.body)
+  if derr then
+    return nil
+  end
+  return ecb_rate(body)
+end
 
 -- Rounds to 6 decimals, because plain multiplication leaves binary tails:
 -- 0.11 * 1.0975 is 0.12072499999999999, not 0.120725. The rounding shifts a
 -- rate by under half a millionth of a dollar per 1M tokens, which no cost line
--- can show.
-local function dollars(pricing)
+-- can show. A nil `rate` is the pinned fallback.
+local function dollars(pricing, rate)
+  local factor = rate or EUR_TO_USD
   local function convert(amount)
-    return math.floor(amount * EUR_TO_USD * 1e6 + 0.5) / 1e6
+    return math.floor(amount * factor * 1e6 + 0.5) / 1e6
   end
   return {
     input = convert(pricing.input),
@@ -82,7 +135,7 @@ local MODELS = {
     prefixes = { "kimi-k3.1-pro" },
     tier = "strong",
     context_window = 1000000,
-    max_output_tokens = 65536,
+    max_output_tokens = 64000,
     supports_thinking = true,
     supports_vision = true,
     pricing = { input = 3.30, output = 16.50, cache_write = 0.0, cache_read = 0.825 },
@@ -112,7 +165,7 @@ local MODELS = {
     prefixes = { "minimax-m3" },
     tier = "medium",
     context_window = 1000000,
-    max_output_tokens = 65536,
+    max_output_tokens = 64000,
     supports_thinking = true,
     supports_vision = true,
     pricing = { input = 0.44, output = 2.20, cache_write = 0.0, cache_read = 0.11 },
@@ -145,23 +198,64 @@ maki.provider.register({
   api_key_env = API_KEY_ENV,
   -- No provider-wide output cap: a row that states none sends no
   -- max_tokens and the API's own limit applies. minimax-m3 and kimi-k3.1-pro
-  -- keep the 65536 their model cards declare.
+  -- keep the 64000 their model cards and `/pricing` state.
   max_output_tokens = false,
   models = CATALOGUE,
 
   -- /models also lists embedding, speech and rerank model ids. Anything the
   -- table does not list is filtered out as we can't know from the models list
-  -- what kind of model is behind the id.
+  -- what kind of model is behind the id. /pricing describes every id it
+  -- knows with live EUR rates, a context window and an output cap, and also
+  -- carries the ids off the recommended catalogue, so the KNOWN gate stays
+  -- first and the figures only refresh the rows it lets through. A row
+  -- /pricing prices only partly keeps its fallback rather than a half price,
+  -- and when /pricing does not answer at all every row lists with its
+  -- fallback untouched. The overlay converts at the ECB rate fetched for the
+  -- listing; when that feed does not answer, the pinned factor does.
   list_models = function(ctx)
     local body, err = ctx.get_json(MODELS_PATH)
     if err then
       return nil, err
     end
+    local rates = {}
+    local priced, perr = ctx.get_json(PRICING_PATH)
+    if not perr and type(priced) == "table" and type(priced.data) == "table" then
+      for _, entry in ipairs(priced.data) do
+        if type(entry) == "table" and entry.type == "LLM" and type(entry.id) == "string" then
+          rates[entry.id] = entry
+        end
+      end
+    end
+    local fx = nil
+    if next(rates) then
+      fx = live_rate()
+    end
     return parse.models(body, function(m)
       if type(m) ~= "table" or type(m.id) ~= "string" or KNOWN[m.id] == nil then
         return nil
       end
-      return { id = m.id }
+      local entry = rates[m.id]
+      if not entry then
+        return { id = m.id }
+      end
+      local p = type(entry.pricing) == "table" and entry.pricing or {}
+      local input = parse.as_f64(p.promptToken)
+      local output = parse.as_f64(p.completionToken)
+      local pricing
+      if input and output then
+        pricing = dollars({
+          input = input,
+          output = output,
+          cache_write = 0.0,
+          cache_read = parse.as_f64(p.cachedPromptToken) or 0,
+        }, fx)
+      end
+      return {
+        id = m.id,
+        pricing = pricing,
+        context_window = parse.as_u32(entry.contextWindowTokens),
+        max_output_tokens = parse.as_u32(entry.maxOutputTokens),
+      }
     end)
   end,
 
@@ -191,11 +285,14 @@ maki.provider.register({
     if not credits then
       return nil, "GreenPT answered without a credit balance in X-Credits-Remaining"
     end
+    -- The USD figure says "approximation" on purpose: it converts at the
+    -- live ECB rate, and at the pin when the feed does not answer.
+    local approx = credits * (live_rate() or EUR_TO_USD)
     return {
       limits = {
         {
           label = "API credits",
-          detail = string.format("EUR %.2f (~USD %.2f) left", credits, credits * EUR_TO_USD),
+          detail = string.format("EUR %.2f (~USD %.2f) left", credits, approx),
         },
       },
     }

@@ -1,9 +1,10 @@
 # greenpt
 
 A maki plugin that adds the [GreenPT](https://greenpt.ai) API as a provider.
-GreenPT is an OpenAI-compatible endpoint with no API for model metadata, so a
-curated model table is the catalogue and `list_models` only drops an id the
-API no longer lists.
+GreenPT is an OpenAI-compatible endpoint whose `GET /v1/models` lists ids
+without metadata, so a curated model table is the catalogue; `list_models`
+drops an id the API no longer lists and overlays the live figures of
+`GET /v1/pricing` on the rows that remain.
 
 ## What it adds
 
@@ -13,9 +14,10 @@ API no longer lists.
   `plugin.toml`, shown in the install approval prompt) and receives the key
   saved for it.
 - Curated rows for glm-5.3, glm-5.3-flash, kimi-k3.1-pro,
-  deepseek-v4.1-flash-1017 and minimax-m3, with GreenPT's own EUR rates per 1M
-  tokens, context windows, the output caps their cards declare, and vision and
-  thinking support.
+  deepseek-v4.1-flash-1017 and minimax-m3, with context windows, the output
+  caps their cards declare, and vision and thinking support, plus GreenPT's
+  own EUR rates per 1M tokens as the offline fallback - `list_models` prices
+  every listing from the live `/v1/pricing` figures instead.
 - `/usage` from GreenPT's credit balance, the one usage figure an API key can
   read: what is left of your prepaid credits, in EUR with a USD approximation.
 - GreenPT bills no cache write, so `cache_write` is 0.0. It enables reasoning
@@ -26,14 +28,23 @@ API no longer lists.
 
 ## Keeping the table current
 
-The curated table covers GreenPT's recommended catalogue. Check these when
-GreenPT announces models or price changes:
+The curated table covers GreenPT's recommended catalogue. Every
+`list_models` run fetches `GET /v1/pricing` and overlays its live EUR rates
+per 1M, context windows and output caps on the rows the table lets through,
+so a GreenPT price change moves the cost lines without touching the plugin
+(the endpoint is documented at https://docs.greenpt.ai/regions: per
+endpoint, so a US base URL prices from the US list). The rows are the
+offline fallback and the readable description; what no endpoint states
+remains the curation job - the recommended catalogue itself, the tiers,
+vision and the thinking ladders. Check these when GreenPT announces models
+or price changes:
 
 - Model list, prices, context windows and limits:
   https://docs.greenpt.ai/model-cards
 - Every release, price change and deprecation: the "Model changes" list at
   the bottom of the same page
 - What `GET /v1/models` answers: https://docs.greenpt.ai/models
+- What `GET /v1/pricing` answers: https://docs.greenpt.ai/regions
 - Which `reasoning_effort` values each model accepts, and which reject
   `"none"`: https://docs.greenpt.ai/reasoning
 - Token pricing overview: https://docs.greenpt.ai/pricing
@@ -58,24 +69,30 @@ or effort ladder to curate. Status changes mean different things:
   unless GreenPT moves one back.
 
 Whatever the table does not list, `list_models` filters out, which is also how
-the embedding, speech and rerank ids stay out of the picker.
+the embedding, speech and rerank ids stay out of the picker. `/v1/pricing`
+carries the not-recommended ids too, so it refreshes prices but never adds a
+model.
 
 Prices are GreenPT's EU endpoint list in EUR per 1M tokens - the US endpoint
-(`api.us.greenpt.ai`) serves a subset at its own prices, so do not mix the two:
-the plugin targets the EU default. GreenPT quotes and bills in EUR while maki
-counts in dollars, so the rows hold GreenPT's EUR rates verbatim and a single
-`EUR_TO_USD` factor converts them where the table is registered. Keep it that
-way: writing dollars into a row makes it unreadable against its model card, and
-two conversions (here and in the price) drift apart. The factor is the European
-Central Bank's daily euro reference rate, and it takes one edit to refresh:
+(`api.us.greenpt.ai`) serves a subset at its own prices, and `/v1/pricing` on
+that host answers with the US figures, so pointing `GREENPT_BASE_URL` there
+prices from the US list; the plugin targets the EU default. GreenPT quotes
+and bills in EUR while maki counts in dollars: every listing fetches the
+European Central Bank's daily euro reference rate from its key-free SDMX
+feed and converts the live figures at it. Only a listing where that feed
+does not answer converts at the pinned `EUR_TO_USD`, which is also what the
+fallback rows registered at startup carry. Keep the rows in EUR: writing
+dollars into a row makes it unreadable against its model card, and two
+conversions drift apart. The pin takes one edit to refresh:
 
 ```sh
 curl -s "https://data-api.ecb.europa.eu/service/data/EXR/D.USD.EUR.SP00.A?lastNObservations=1&format=csvdata" | tail -1
 ```
 
-GreenPT's own list prices are the thing to keep exact; the rate only has to be
-current enough that the cost lines mean something, so refreshing it on a table
-sync is enough.
+GreenPT's own list prices are the thing to keep exact; the live `/pricing`
+figures take care of that, and the pin only has to be current enough that a
+listing without the ECB feed still means something, so refreshing it on a
+table sync is enough.
 
 When adding a model, copy the ladder straight off the `/reasoning` page and
 spare a thought for the trap the table layout exists to avoid: never declare
@@ -125,10 +142,12 @@ to ask for:
   dashboard, which no key can reach.
 
 The balance is EUR, GreenPT's billing currency; the USD figure in the detail
-line uses the same `EUR_TO_USD` factor as the price rows.
+line converts at the same live ECB rate as the prices, falling back to the
+pin when the feed does not answer.
 
 ## Permissions
 
-- `net`: calls `https://api.greenpt.ai/v1`.
+- `net`: calls the GreenPT base URL and the ECB rate feed.
 - `env`: reads `GREENPT_API_KEY`.
-- `net_hosts`: `api.greenpt.ai`, `api.us.greenpt.ai`.
+- `net_hosts`: `api.greenpt.ai`, `api.us.greenpt.ai`,
+  `data-api.ecb.europa.eu`.

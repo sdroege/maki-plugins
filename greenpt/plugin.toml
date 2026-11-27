@@ -4,4 +4,4 @@ providers = ["greenpt"]
 [permissions]
 net = true
 env = true
-net_hosts = ["api.greenpt.ai", "api.us.greenpt.ai"]
+net_hosts = ["api.greenpt.ai", "api.us.greenpt.ai", "data-api.ecb.europa.eu"]
