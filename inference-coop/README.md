@@ -15,7 +15,8 @@ renewable energy (GreenPT) or publicly developed sovereign models
 - The `inference-coop` provider: its models become
   `inference-coop/<provider>/<model>` in `/model` and the picker.
 - Curated rows for the 10 chat models, with context windows, vision support
-  and prices from the co-op's authoritative LiteLLM config.
+  and thinking ladders, and prices read live from the co-op's gateway
+  (the rows' own rates are the fallback when it does not answer).
 - `/usage` from the co-op's own meter: the allowance window you are in, what
   has been spent against it and when it resets, the same figures the member
   dashboard shows.
@@ -79,21 +80,34 @@ Three things the gateway cannot tell an API key:
 
 ## Keeping the table current
 
+Prices are not really kept here: `list_models` reads the live per-token
+costs off the gateway's `/model/info` route (a LiteLLM route at the host
+root, reachable with a member key but documented nowhere, so it could be
+closed without notice) and maki lets a discovered price outrank a row's. The
+gateway meters each call at exactly those figures, EUR-quoted providers
+included at the ECB daily rate, so a session prices at real co-op spend.
+What follows is therefore about the fallback rates: the last-committed
+figures that stand in when the route answers nothing or the gateway is
+unreachable. Keep them at the config's committed numbers so the fallback
+stays honest.
+
 The curated table covers the co-op's chat models. Check these when the co-op
 adds models or rates change:
 
 - Member-facing model list, context windows, vision support:
   https://git.inference.coop/co-op/docs/src/branch/main/guides/models.md
-- Authoritative pricing, including the cached-input rates:
-  https://git.inference.coop/code/litellm/src/branch/main/config.yaml
+- Authoritative pricing and the EUR list behind it:
+  https://git.inference.coop/code/litellm/src/branch/main/config.yaml and
+  https://git.inference.coop/code/litellm/src/branch/main/eur_prices.json
 - Regolo's own catalogue and rates, for the pricing of regolo/* rows:
   https://regolo.ai/models (announcements: https://regolo.ai/pricing-update/)
 - API usage and auth: https://git.inference.coop/co-op/docs/src/branch/main/guides/api-access.md
   (it documents the chat and completion endpoints only: the usage routes above
   are LiteLLM's own, and the docs list no usage endpoint for members)
 
-The docs state the two stay in sync: the LiteLLM config holds the numbers,
-models.md mirrors them. In practice they disagree, and each in its own way,
+The docs state the two stay in sync: models.md mirrors the config, and the
+config's `model_info` is generated from `eur_prices.json`, the EUR list
+prices. In practice they disagree, and each in its own way,
 so read both before touching a row:
 
 - The config carries an operator-only model models.md never shows
@@ -118,15 +132,22 @@ records show. Check both before recording 0.0.
 GreenPT's list is https://docs.greenpt.ai/model-cards. The rule came from
 cached input on greenpt/glm-5.3, where the config listed no cached rate and
 models.md showed a dash while GreenPT billed 0.275 (both co-op sources list
-the rate now and agree with the row). Since 2026-11-18 the co-op states every
-EUR-quoted model in its dollar fields at the policy rate FX 1.16, so
-both greenpt/* and regolo/* rows are the provider's EUR list times 1.16 and
-always sit a little above the figure on the provider's own page (the EUR list
-for greenpt/glm-5.3 is 1.10/4.40/0.275, the row and the config both say
-1.276/5.104/0.319). Copying a provider's EUR numerals into a row under-states
-co-op spend by the FX gap, which is the same mistake the co-op's own config
-header warns its operators against. Tinfoil quotes dollars, so tinfoil/* rows
-match its list directly. Regolo's own list is the per-token catalogue embedded
+the rate now and agree with the row). GreenPT and Regolo quote EUR, and those
+list prices live in the config repo's eur_prices.json - the only source of
+those numbers. The config's dollar fields for them are generated: fx_sync.py
+converts the EUR list at the ECB daily reference rate at every boot, and the
+config carries a pinned generated figure as a fallback, named in its header
+(FX_FALLBACK_USD, 1.0975 = ECB 2026-11-26). Before 2026-11-26 the co-op
+instead converted at a fixed policy rate, FX 1.16, and a header that still
+said so sat over numbers the boot sync had already moved. So greenpt/* and
+regolo/* rows sit a little above the EUR figure on the provider's own page
+(the EUR list for greenpt/glm-5.3 is 1.10/4.40/0.275, the row and the config
+both say 1.20725/4.829/0.3018125, the pin times the list) and track the ECB
+rate with some lag, the pin being the last generated figure committed.
+Copying a provider's EUR numerals into a row under-states co-op spend by the
+FX gap, which is the same mistake the co-op's own config header warns its
+operators against. Tinfoil quotes dollars, so tinfoil/* rows match its list
+directly. Regolo's own list is the per-token catalogue embedded
 in https://regolo.ai/models (a `regolo_model_list` JSON blob in the page HTML,
 mirrored by the visible pricing table), plus its rate announcements at
 https://regolo.ai/pricing-update/.

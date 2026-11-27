@@ -1,8 +1,9 @@
 -- Inference Cooperative (inference.coop), a member-governed gateway in
 -- front of several providers. Model ids are `<provider>/<model>`, so a maki
--- spec reads `inference-coop/greenpt/glm-5.3`. The gateway has no model
--- metadata API beyond the OpenAI /models list, so the curated table is the
--- catalogue and `list_models` only drops an id the gateway no longer lists.
+-- spec reads `inference-coop/greenpt/glm-5.3`. The curated table describes
+-- the models (tiers, windows, vision, thinking ladders); `list_models` reads
+-- the live rates off the gateway's /model/info route and only lists an id the
+-- table knows.
 --
 -- Model, context window, vision and rate data from the co-op's public docs:
 -- https://git.inference.coop/co-op/docs/src/branch/main/guides/models.md (the
@@ -14,12 +15,12 @@
 
 local parse = require("maki.provider_parse")
 
-local MODELS_PATH = "/models"
 local API_KEY_ENV = "INFERENCE_COOP_API_KEY"
 
--- The gateway is a LiteLLM proxy, and its management routes sit at the host
--- root rather than under the /v1 chat origin, so the usage calls below cannot
--- be built by appending a path to base_url.
+-- The gateway is a LiteLLM proxy, and its management and model-info routes
+-- sit at the host root rather than under the /v1 chat origin, so the calls
+-- below cannot be built by appending a path to base_url.
+local MODEL_INFO_PATH = "/model/info"
 local KEY_INFO_PATH = "/key/info"
 local TEAM_INFO_PATH = "/team/info"
 
@@ -28,26 +29,27 @@ local MONTHLY_DURATION = "30d"
 
 -- Prices are per 1M tokens and are what the co-op pays the provider, not
 -- what a member pays: members get a monthly allowance. Recorded anyway, so
--- maki's cost sums track co-op spend. The rows are the dollar rates the co-op's
--- LiteLLM config states in model_info, restated from its per-token figure to
--- per 1M and changed in nothing else - maki's fields are per 1M, which is the
--- only arithmetic a row should ever need. That config is what its spend records
--- are metered at, and its own docs call it the authoritative source. Where a
--- provider's own price list (GreenPT's at
+-- maki's cost sums track co-op spend. The live figures come from the
+-- gateway's /model/info: its model_info carries per-token dollar costs, the
+-- exact ones the gateway meters each call at, EUR-quoted providers included
+-- at the ECB daily rate. `list_models` restates them per 1M, and maki lets a
+-- discovered price outrank a row's. The static pricing is the fallback for
+-- when the route answers nothing (it is a LiteLLM admin route the co-op
+-- leaves open to member keys, documented nowhere, and could be closed
+-- without notice) or the gateway is unreachable.
+-- A fallback is the figure the committed config states in model_info, in
+-- dollars, changed in nothing else. That config's header says its
+-- greenpt/* and regolo/* dollar fields are generated from the repo's
+-- eur_prices.json at the ECB daily rate ("never paste EUR numerals into
+-- model_info", since 2026-11-26), so a committed figure is the last pin
+-- (FX 1.0975 = ECB 2026-11-26) and the gateway one rate ahead of it. Never
+-- copy a provider's own EUR numerals (GreenPT's at
 -- https://docs.greenpt.ai/model-cards, Regolo's embedded in
--- https://regolo.ai/models) disagrees, the co-op's config wins: never copy a
--- provider's numerals straight into a row. No provider bills a cache write,
--- so cache_write is 0.0, and an unlisted cache read is 0.0 too. Tinfoil
--- quotes dollars, so tinfoil/* rows match its list directly. GreenPT and
--- Regolo quote EUR, and since 2026-11-18 the co-op converts those lists into
--- its dollar fields at its own policy rate, FX 1.16 ("never paste EUR numerals
--- into model_info", as its config header puts it), so greenpt/* and regolo/*
--- rows sit about 16% above the EUR figure a member reads on the provider's own
--- page. That conversion is the co-op's decision and stays there: copy its
--- numbers, do not convert here, and treat the config's header line naming the
--- current policy rate as part of what a sync has to re-read, since a rate the
--- co-op changes means new numbers to carry rather than a stale factor to
--- multiply by.
+-- https://regolo.ai/models) into a row, and do not convert here: the rows
+-- copy the config's numbers. Tinfoil quotes dollars, so its list matches the
+-- config directly. No provider bills a cache write, so a fallback cache_write
+-- is 0.0, and an unlisted cache read is 0.0 too. A sync re-reads the numbers
+-- and the header's pin.
 -- The gateway forwards to OpenAI-compatible endpoints that reason by
 -- default, and no built-in effort dialect matches that shape (off must send
 -- "none" while "standard" omits the field on off), so no dialect is declared
@@ -68,13 +70,14 @@ local MODELS = {
   {
     -- The co-op's default model. Serves the 1017 snapshot since 2026-11-16
     -- (GreenPT dropped the base release) under the same id, so only the rate
-    -- moved: GreenPT's 1017 list of 0.36/1.45/0.04 EUR, at FX 1.16.
+    -- moved: GreenPT's 1017 list of 0.36/1.45/0.04 EUR at the config's pin,
+    -- FX 1.0975 (ECB 2026-11-26).
     prefixes = { "greenpt/deepseek-v4.1-flash" },
     tier = "medium",
     context_window = 1000000,
     supports_thinking = true,
     supports_vision = true,
-    pricing = { input = 0.4176, output = 1.682, cache_write = 0.0, cache_read = 0.0464 },
+    pricing = { input = 0.3951, output = 1.591375, cache_write = 0.0, cache_read = 0.0439 },
     thinking_fields = efforts("off", "minimal", "low", "medium", "high"),
   },
   {
@@ -91,7 +94,7 @@ local MODELS = {
     tier = "strong",
     context_window = 1000000,
     supports_thinking = true,
-    pricing = { input = 1.276, output = 5.104, cache_write = 0.0, cache_read = 0.319 },
+    pricing = { input = 1.20725, output = 4.829, cache_write = 0.0, cache_read = 0.3018125 },
     thinking_fields = efforts("off", "minimal", "low", "medium", "high"),
   },
   {
@@ -110,7 +113,7 @@ local MODELS = {
     tier = "medium",
     context_window = 1000000,
     supports_thinking = true,
-    pricing = { input = 0.1276, output = 0.5104, cache_write = 0.0, cache_read = 0.02552 },
+    pricing = { input = 0.120725, output = 0.4829, cache_write = 0.0, cache_read = 0.024145 },
     thinking_fields = efforts("off", "minimal", "low", "medium", "high"),
   },
   {
@@ -118,12 +121,12 @@ local MODELS = {
     -- the co-op's Apertus provider: same open weights, EU ZDR + renewables.
     -- Context is the co-op's measured 262K; Regolo's catalogue advertises
     -- 30K input, which the gateway demonstrably exceeds. Prices are the
-    -- co-op's dollar rates (Regolo's EUR list at 1.16).
+    -- co-op's dollar rates (Regolo's EUR list at the config's pin, 1.0975).
     prefixes = { "regolo/apertus-70b" },
     tier = "medium",
     context_window = 262144,
     supports_vision = true,
-    pricing = { input = 1.16, output = 3.944, cache_write = 0.0, cache_read = 0.0 },
+    pricing = { input = 1.0975, output = 3.7315, cache_write = 0.0, cache_read = 0.0 },
   },
   {
     -- The gateway forces chat_template_kwargs: {enable_thinking: false} for
@@ -133,7 +136,7 @@ local MODELS = {
     tier = "medium",
     context_window = 262144,
     supports_vision = true,
-    pricing = { input = 0.696, output = 3.944, cache_write = 0.0, cache_read = 0.0 },
+    pricing = { input = 0.6585, output = 3.7315, cache_write = 0.0, cache_read = 0.0 },
   },
   {
     -- Added 2026-11-13. Hybrid instruct + reasoning Small 4 (119B) with
@@ -144,7 +147,7 @@ local MODELS = {
     tier = "medium",
     context_window = 262144,
     supports_vision = true,
-    pricing = { input = 0.232, output = 0.812, cache_write = 0.0, cache_read = 0.0 },
+    pricing = { input = 0.2195, output = 0.76825, cache_write = 0.0, cache_read = 0.0 },
   },
   {
     -- Added 2026-11-13. Dense multimodal Gemma 4 (31B) with native function
@@ -153,7 +156,7 @@ local MODELS = {
     tier = "medium",
     context_window = 262144,
     supports_vision = true,
-    pricing = { input = 0.464, output = 0.696, cache_write = 0.0, cache_read = 0.0 },
+    pricing = { input = 0.439, output = 0.6585, cache_write = 0.0, cache_read = 0.0 },
   },
   {
     -- Reasons whether asked or not and accepts no "none", so off clamps to
@@ -207,19 +210,36 @@ maki.provider.register({
   max_output_tokens = false,
   models = MODELS,
 
-  -- /models also lists the speech models (whisper, voxtral-tts). Anything
-  -- the table does not list is filtered out as we can't know from the
-  -- models list what kind of model is behind the id.
+  -- /model/info also lists the alias routes (deepseek-flash-green) and the
+  -- audio, embedding and image models. Anything the table does not list is
+  -- filtered out, as we can't know what a foreign id describes. A price read
+  -- here outranks the row's fallback; a row the gateway prices only partly
+  -- keeps its fallback rather than a half price, and a row without a
+  -- rateable pair still lists with the fallback untouched.
   list_models = function(ctx)
-    local body, err = ctx.get_json(MODELS_PATH)
+    local root = origin(ctx.base_url)
+    if not root then
+      return nil, "cannot read the gateway origin from " .. tostring(ctx.base_url)
+    end
+    local body, err = ctx.get_json(root .. MODEL_INFO_PATH)
     if err then
       return nil, err
     end
-    return parse.models(body, function(m)
-      if type(m) ~= "table" or type(m.id) ~= "string" or KNOWN[m.id] == nil then
+    return parse.models(body, function(entry)
+      if type(entry) ~= "table" or type(entry.model_name) ~= "string" or KNOWN[entry.model_name] == nil then
         return nil
       end
-      return { id = m.id }
+      local info = type(entry.model_info) == "table" and entry.model_info or {}
+      if type(info.mode) == "string" and info.mode ~= "chat" then
+        return nil
+      end
+      local pricing = parse.pricing(
+        parse.as_f64(info.input_cost_per_token),
+        parse.as_f64(info.output_cost_per_token),
+        parse.as_f64(info.cache_creation_input_token_cost),
+        parse.as_f64(info.cache_read_input_token_cost)
+      )
+      return { id = entry.model_name, pricing = pricing }
     end)
   end,
 
