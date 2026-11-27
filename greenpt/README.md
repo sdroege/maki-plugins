@@ -16,6 +16,8 @@ API no longer lists.
   deepseek-v4.1-flash-1017 and minimax-m3, with GreenPT's own EUR rates per 1M
   tokens, context windows, the output caps their cards declare, and vision and
   thinking support.
+- `/usage` from GreenPT's credit balance, the one usage figure an API key can
+  read: what is left of your prepaid credits, in EUR with a USD approximation.
 - GreenPT bills no cache write, so `cache_write` is 0.0. It enables reasoning
   by default, so every row spells its own `thinking_fields` ladder: off sends
   `reasoning_effort = "none"`, each named level sends itself, and a mode the
@@ -102,6 +104,28 @@ details.
 
 Set `GREENPT_API_KEY` in your environment. The plugin sends it as a bearer
 token. Point the slug elsewhere with `GREENPT_BASE_URL` or `providers.toml`.
+
+### The credit balance behind `/usage`
+
+GreenPT has no usage endpoint for API keys: the account portal's analytics sit
+behind its login session and `/v1` answers 404 for `credits`, `usage` and
+`balance` alike. What a key can read is the prepaid credit balance, which
+GreenPT returns in the `X-Credits-Remaining` header of billed API responses -
+but not of `GET /v1/models`, which omits it. The plugin reads it off the free
+Mangrove discovery call `GET /v1/agents`, which carries the header, bills
+nothing and keeps answering at a zero balance, so `/usage` still reports after
+the credits run out.
+
+That balance is all `/usage` can show, and only because there is nothing else
+to ask for:
+
+- No percentage: credits are a prepaid top-up that never expires, with no
+  budget or window to divide by, so no reset is reported either.
+- No spend, per-day or per-model history: those live in the portal's usage
+  dashboard, which no key can reach.
+
+The balance is EUR, GreenPT's billing currency; the USD figure in the detail
+line uses the same `EUR_TO_USD` factor as the price rows.
 
 ## Permissions
 

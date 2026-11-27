@@ -17,6 +17,7 @@
 local parse = require("maki.provider_parse")
 
 local MODELS_PATH = "/models"
+local AGENTS_PATH = "/agents"
 local API_KEY_ENV = "GREENPT_API_KEY"
 
 -- Prices are GreenPT's list in EUR per 1M tokens, from the model cards page;
@@ -162,5 +163,41 @@ maki.provider.register({
       end
       return { id = m.id }
     end)
+  end,
+
+  -- GreenPT gives an API key no usage endpoint: the account portal's analytics
+  -- hide behind its login session and /v1 answers 404 for credits, usage and
+  -- balance alike. What a key can read is the credit balance itself, which
+  -- https://docs.greenpt.ai/credits promises in X-Credits-Remaining on every
+  -- API response - every billed one though: /v1/models omits it (measured
+  -- 2026-11-27). The free Mangrove discovery call GET /v1/agents answers with
+  -- the header, bills nothing, and keeps working at a zero balance, so it is
+  -- the carrier. Credits are a prepaid EUR balance that never expires and has
+  -- no cap to divide by, and no spend history is key-readable, so this shows
+  -- the balance and nothing else.
+  fetch_usage = function(ctx)
+    if not ctx.base_url then
+      return nil, "no GreenPT origin to ask for the credit balance"
+    end
+    local res, err = maki.net.request(ctx.base_url .. AGENTS_PATH, { headers = ctx.headers })
+    if err then
+      return nil, err
+    end
+    if res.status >= 400 then
+      return nil, maki.provider.http_error(res)
+    end
+    -- Header values are strings, so tonumber, not parse.as_f64.
+    local credits = res.headers and tonumber(res.headers["x-credits-remaining"])
+    if not credits then
+      return nil, "GreenPT answered without a credit balance in X-Credits-Remaining"
+    end
+    return {
+      limits = {
+        {
+          label = "API credits",
+          detail = string.format("EUR %.2f (~USD %.2f) left", credits, credits * EUR_TO_USD),
+        },
+      },
+    }
   end,
 })
