@@ -17,6 +17,10 @@ For cross-session, project-scoped notes use the built-in `memory` tool.
 - A `compact` tool the model calls at a natural boundary to summarize the
   session itself, with the same free-form guidance input as `/compact`. A
   subagent calling it compacts its own conversation.
+- A `context_usage` tool reporting the calling agent's own context: tokens in
+  use, window size, percentage. A subagent sees its own window, never the
+  parent's. Pairs with `compact`. Needs maki 0.7.5 or newer, and is skipped
+  silently on older hosts.
 - A `TurnComplete` listener that nudges the model to save important state to
   `notes` as the context window fills, at 40%, 60%, and 80% of the window
   (configurable), with hysteresis: each step fires once per crossing, one
@@ -25,7 +29,8 @@ For cross-session, project-scoped notes use the built-in `memory` tool.
   nudged too, addressed by the task id their events carry, and their state
   dies with the session that opened them.
 - Prompt hints: a system-prompt nudge to save/read notes around compaction,
-  and one to call `compact` at a task end once the context runs high.
+  and one to check `context_usage` and, when it runs high, save what matters
+  and call `compact` at a task end.
 - An `agent.compact.before` layer that gives every automatic compaction one
   turn: the ask defers with a nudge to save notes, delivered as the model's
   next message, and the ask after that turn runs with a read-back naming the
@@ -43,12 +48,15 @@ For cross-session, project-scoped notes use the built-in `memory` tool.
 
 ## Install
 
-Requires maki 0.7.2 or newer.
+Requires maki 0.7.2 or newer. The `context_usage` tool and its prompt
+hint need 0.7.5 or newer, the release providing `ctx:context()`; older
+hosts load the plugin without them.
 
 > **Note:** the `defer` verdict of `agent.compact.before`, the `task`
-> option of `maki.session.notify`, and `maki.session.request_compact` are not merged upstream yet. Build maki from
-> the [`dev` branch](https://github.com/sdroege/maki/tree/dev) for now.
-> Everything else this plugin uses is upstream.
+> option of `maki.session.notify`, `maki.session.request_compact`, and
+> `ctx:context()` (maki 0.7.5) are not released upstream yet. Build
+> maki from the [`dev` branch](https://github.com/sdroege/maki/tree/dev)
+> for now. Everything else this plugin uses is upstream.
 
 Clone the repository and symlink this plugin into maki's package directory:
 

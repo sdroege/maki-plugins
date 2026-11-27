@@ -328,15 +328,48 @@ Never batch this call with others: the summary swallows their results before you
   end,
 })
 
+-- The reminders only catch the steps; this is the number the model can ask
+-- for itself. Scoped to the calling agent: a subagent fills its own window,
+-- so it must not gauge its room against the parent's. The API lands in
+-- 0.7.5; older hosts load the plugin without the tool and its hint.
+local has_context_api = maki.version.ge(maki.version(), "0.7.5")
+
+if has_context_api then
+  maki.api.register_tool({
+    name = "context_usage",
+    description = [[Report this agent's own context: tokens in use, the window size, and the percent used. A subagent sees its own window. If the room left will not fit the work left, save what matters to notes and call compact.]],
+
+    schema = {
+      type = "object",
+      properties = {},
+    },
+
+    handler = function(_input, ctx)
+      local usage, err = ctx:context()
+      if not usage then
+        return { llm_output = "error: " .. tostring(err), is_error = true }
+      end
+      local size, window = usage.size, usage.window
+      if type(size) ~= "number" or type(window) ~= "number" or window == 0 then
+        return { llm_output = "error: the host reported no context window", is_error = true }
+      end
+      local pct = math.floor(size / window * 100 + 0.5)
+      return ("context %d / %d tokens (%d%% used)"):format(size, window, pct)
+    end,
+  })
+end
+
 maki.api.register_prompt_hint({
   slot = "tool_usage",
   content = "- Save session state that must survive compaction to **notes**, appending right after each milestone (a passing test, a design decision, a discovered layout). Use **memory** only for knowledge useful in future sessions on this project. Read notes back after a compaction before redoing work.",
 })
 
-maki.api.register_prompt_hint({
-  slot = "tool_usage",
-  content = "- Call **compact** at a task end once the context runs high, after saving what must not be lost.",
-})
+if has_context_api then
+  maki.api.register_prompt_hint({
+    slot = "tool_usage",
+    content = "- Check **context_usage** when unsure how full the context is; when it runs high, save what matters to **notes**, then call **compact** at a task end.",
+  })
+end
 
 local outstanding = {}
 -- Keyed by task id; a subagent's state dies with the session that opened it.

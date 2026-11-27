@@ -102,7 +102,20 @@ end
 
 local api = { autocmds = {}, tools = {}, slots = {} }
 
+local CTX_USAGE
+local CTX_ERR
+
 local maki = {
+  -- Gate for context_usage: answer as a host new enough to have ctx:context().
+  version = setmetatable({
+    ge = function()
+      return true
+    end,
+  }, {
+    __call = function()
+      return { major = 0, minor = 7, patch = 5 }
+    end,
+  }),
   env = { state_dir = function()
     return STATE.dir
   end },
@@ -208,6 +221,14 @@ local ctx = setmetatable({}, {
     if key == "session_id" then
       return function()
         return "S1"
+      end
+    end
+    if key == "context" then
+      return function()
+        if CTX_ERR then
+          return nil, CTX_ERR
+        end
+        return CTX_USAGE
       end
     end
     if key == "tool_output_lines" then
@@ -360,6 +381,20 @@ check("header reads the aliased path", tool.header({ command = "append", file_pa
 tool.restore({ command = "write", file_path = "alias.md", content = "replaced" }, "wrote alias.md", false, ctx)
 check("restore renders the legacy body", viewed[#viewed], "replaced")
 check("restore highlights the aliased path", exts[#exts], "md")
+
+-- context_usage reports the calling agent's own gauge, pairing with compact.
+local usage = api.tools["context_usage"]
+check("context_usage registered", usage ~= nil, true)
+CTX_USAGE = { size = 42300, window = 200000 }
+check("usage output", usage.handler({}, ctx), "context 42300 / 200000 tokens (21% used)")
+CTX_ERR = "ctx:context needs a handler ctx"
+local missing = usage.handler({}, ctx)
+check("missing gauge errors", missing.is_error, true)
+check("error reaches the model", missing.llm_output:find("handler ctx", 1, true) ~= nil, true)
+CTX_ERR = nil
+CTX_USAGE = { size = 100 }
+check("no window errors", usage.handler({}, ctx).is_error, true)
+CTX_USAGE = nil
 
 -- Without a state dir the reminder falls back to in-memory hysteresis.
 STATE.dir = nil
