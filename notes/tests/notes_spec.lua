@@ -175,22 +175,22 @@ check("ignores nil size", fire, nil)
 check(
   "first step text",
   h.reminder_text(41, 100, 0.4),
-  "context is 41% full: start a note now with important session state, so a later compaction cannot drop it"
+  "context 41 / 100 tokens (41% used): start a note now with important session state, so a later compaction cannot drop it"
 )
 check(
   "second step text",
   h.reminder_text(61, 100, 0.6),
-  "context is 61% full: update (or start) your notes with important session state, so a compaction cannot drop it"
+  "context 61 / 100 tokens (61% used): update (or start) your notes with important session state, so a compaction cannot drop it"
 )
 check(
   "top step text",
   h.reminder_text(83, 100, 0.8),
-  "context is nearly full (83% of the window): save important session state to notes now, before a compaction drops it"
+  "context 83 / 100 tokens (83% used): nearly full, save important session state to notes now, before a compaction drops it"
 )
 check(
   "compact step text",
   h.reminder_text(87, 100, 0.85),
-  "context is 87% full: save what matters to notes, then call compact at your next task boundary"
+  "context 87 / 100 tokens (87% used): save what matters to notes, then call compact at your next task boundary"
 )
 
 -- state_from_marker
@@ -207,17 +207,17 @@ check("steps sorted", table.concat(h.remind_steps(), ","), "0.5,0.7,0.9")
 check(
   "last step asks for compact wherever it sits",
   h.reminder_text(91, 100, 0.9),
-  "context is 91% full: save what matters to notes, then call compact at your next task boundary"
+  "context 91 / 100 tokens (91% used): save what matters to notes, then call compact at your next task boundary"
 )
 check(
   "second-to-last step is nearly full",
   h.reminder_text(71, 100, 0.7),
-  "context is nearly full (71% of the window): save important session state to notes now, before a compaction drops it"
+  "context 71 / 100 tokens (71% used): nearly full, save important session state to notes now, before a compaction drops it"
 )
 check(
   "first step starts a note",
   h.reminder_text(52, 100, 0.5),
-  "context is 52% full: start a note now with important session state, so a later compaction cannot drop it"
+  "context 52 / 100 tokens (52% used): start a note now with important session state, so a later compaction cannot drop it"
 )
 h.setup({ remind_steps = { 0.5, 0.7 } })
 check("setup needs three steps", table.concat(h.remind_steps(), ","), "0.5,0.7,0.9")

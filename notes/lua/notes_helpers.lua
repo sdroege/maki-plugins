@@ -80,24 +80,21 @@ function M.reminder_text(context_size, context_window, step)
     return config.reminder_text
   end
   local pct = math.floor(context_size / context_window * 100 + 0.5)
+  -- The same reading the context_usage tool answers with, so the number
+  -- always looks the same however the model heard about it.
+  local gauge = ("context %d / %d tokens (%d%% used)"):format(context_size, context_window, pct)
   local steps = config.remind_steps
   if step == steps[#steps] then
-    return ("context is %d%% full: save what matters to notes, then call compact at your next task boundary"):format(pct)
+    return gauge .. ": save what matters to notes, then call compact at your next task boundary"
   end
   local top = steps[#steps - 1]
   if step == nil or step == top then
-    return ("context is nearly full (%d%% of the window): save important session state to notes now, before a compaction drops it"):format(
-      pct
-    )
+    return gauge .. ": nearly full, save important session state to notes now, before a compaction drops it"
   end
   if step == steps[1] then
-    return ("context is %d%% full: start a note now with important session state, so a later compaction cannot drop it"):format(
-      pct
-    )
+    return gauge .. ": start a note now with important session state, so a later compaction cannot drop it"
   end
-  return ("context is %d%% full: update (or start) your notes with important session state, so a compaction cannot drop it"):format(
-    pct
-  )
+  return gauge .. ": update (or start) your notes with important session state, so a compaction cannot drop it"
 end
 
 -- The defer nudge rides a compaction that was just skipped, unlike the step
