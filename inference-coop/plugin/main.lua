@@ -28,17 +28,26 @@ local MONTHLY_DURATION = "30d"
 
 -- Prices are per 1M tokens and are what the co-op pays the provider, not
 -- what a member pays: members get a monthly allowance. Recorded anyway, so
--- maki's cost sums track co-op spend. The rows carry the co-op's own dollar
--- rates, and where a provider's own price list (GreenPT's at
+-- maki's cost sums track co-op spend. The rows are the dollar rates the co-op's
+-- LiteLLM config states in model_info, restated from its per-token figure to
+-- per 1M and changed in nothing else - maki's fields are per 1M, which is the
+-- only arithmetic a row should ever need. That config is what its spend records
+-- are metered at, and its own docs call it the authoritative source. Where a
+-- provider's own price list (GreenPT's at
 -- https://docs.greenpt.ai/model-cards, Regolo's embedded in
--- https://regolo.ai/models) disagrees, the co-op's sources win: the rows
--- record what the co-op actually pays and what its spend records show. No
--- provider bills a cache write, so cache_write is 0.0, and an unlisted cache
--- read is 0.0 too. The co-op arrives at its dollar rates differently per
--- provider: greenpt/* rows are GreenPT's EUR list stored unconverted in its
--- config's dollar fields, so those rows match GreenPT's list by
--- construction, while regolo/* rows are Regolo's EUR list converted at
--- 1.16, and the rows record those converted dollar figures.
+-- https://regolo.ai/models) disagrees, the co-op's config wins: never copy a
+-- provider's numerals straight into a row. No provider bills a cache write,
+-- so cache_write is 0.0, and an unlisted cache read is 0.0 too. Tinfoil
+-- quotes dollars, so tinfoil/* rows match its list directly. GreenPT and
+-- Regolo quote EUR, and since 2026-11-18 the co-op converts those lists into
+-- its dollar fields at its own policy rate, FX 1.16 ("never paste EUR numerals
+-- into model_info", as its config header puts it), so greenpt/* and regolo/*
+-- rows sit about 16% above the EUR figure a member reads on the provider's own
+-- page. That conversion is the co-op's decision and stays there: copy its
+-- numbers, do not convert here, and treat the config's header line naming the
+-- current policy rate as part of what a sync has to re-read, since a rate the
+-- co-op changes means new numbers to carry rather than a stale factor to
+-- multiply by.
 -- The gateway forwards to OpenAI-compatible endpoints that reason by
 -- default, and no built-in effort dialect matches that shape (off must send
 -- "none" while "standard" omits the field on off), so no dialect is declared
@@ -59,13 +68,13 @@ local MODELS = {
   {
     -- The co-op's default model. Serves the 1017 snapshot since 2026-11-16
     -- (GreenPT dropped the base release) under the same id, so only the rate
-    -- moved: GreenPT's 1017 list, 0.36/1.45/0.04.
+    -- moved: GreenPT's 1017 list of 0.36/1.45/0.04 EUR, at FX 1.16.
     prefixes = { "greenpt/deepseek-v4.1-flash" },
     tier = "medium",
     context_window = 1000000,
     supports_thinking = true,
     supports_vision = true,
-    pricing = { input = 0.36, output = 1.45, cache_write = 0.0, cache_read = 0.04 },
+    pricing = { input = 0.4176, output = 1.682, cache_write = 0.0, cache_read = 0.0464 },
     thinking_fields = efforts("off", "minimal", "low", "medium", "high"),
   },
   {
@@ -82,7 +91,7 @@ local MODELS = {
     tier = "strong",
     context_window = 1000000,
     supports_thinking = true,
-    pricing = { input = 1.10, output = 4.40, cache_write = 0.0, cache_read = 0.275 },
+    pricing = { input = 1.276, output = 5.104, cache_write = 0.0, cache_read = 0.319 },
     thinking_fields = efforts("off", "minimal", "low", "medium", "high"),
   },
   {
@@ -101,7 +110,7 @@ local MODELS = {
     tier = "medium",
     context_window = 1000000,
     supports_thinking = true,
-    pricing = { input = 0.11, output = 0.44, cache_write = 0.0, cache_read = 0.022 },
+    pricing = { input = 0.1276, output = 0.5104, cache_write = 0.0, cache_read = 0.02552 },
     thinking_fields = efforts("off", "minimal", "low", "medium", "high"),
   },
   {
@@ -135,7 +144,7 @@ local MODELS = {
     tier = "medium",
     context_window = 262144,
     supports_vision = true,
-    pricing = { input = 0.20, output = 0.70, cache_write = 0.0, cache_read = 0.0 },
+    pricing = { input = 0.232, output = 0.812, cache_write = 0.0, cache_read = 0.0 },
   },
   {
     -- Added 2026-11-13. Dense multimodal Gemma 4 (31B) with native function
@@ -144,7 +153,7 @@ local MODELS = {
     tier = "medium",
     context_window = 262144,
     supports_vision = true,
-    pricing = { input = 0.40, output = 0.60, cache_write = 0.0, cache_read = 0.0 },
+    pricing = { input = 0.464, output = 0.696, cache_write = 0.0, cache_read = 0.0 },
   },
   {
     -- Reasons whether asked or not and accepts no "none", so off clamps to

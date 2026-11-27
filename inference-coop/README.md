@@ -14,8 +14,8 @@ renewable energy (GreenPT) or publicly developed sovereign models
 
 - The `inference-coop` provider: its models become
   `inference-coop/<provider>/<model>` in `/model` and the picker.
-- Curated rows for the 8 chat models, with context windows, vision support
-  and prices from the co-op's published model list.
+- Curated rows for the 10 chat models, with context windows, vision support
+  and prices from the co-op's authoritative LiteLLM config.
 - `/usage` from the co-op's own meter: the allowance window you are in, what
   has been spent against it and when it resets, the same figures the member
   dashboard shows.
@@ -102,6 +102,10 @@ so read both before touching a row:
 - The config's comments record removals models.md no longer shows
   (greenpt/green-r and green-l, removed 2026-10 once GreenPT marked them
   "not recommended").
+- The config declares four short route aliases members can pin
+  (`deepseek-flash-green`, `deepseek-flash-tee`, `glm-flash-green`, `glm-tee`)
+  that models.md never mentions. They are the same four upstream routes at the
+  same prices, so they are not rows and `list_models` filters them out.
 
 A row needs both sources behind it: drop it when either drops the model.
 
@@ -114,14 +118,16 @@ records show. Check both before recording 0.0.
 GreenPT's list is https://docs.greenpt.ai/model-cards. The rule came from
 cached input on greenpt/glm-5.3, where the config listed no cached rate and
 models.md showed a dash while GreenPT billed 0.275 (both co-op sources list
-the rate now and agree with the row). The co-op arrives at its dollar rates
-differently per provider: greenpt/* rows are GreenPT's EUR list stored
-unconverted in the config's dollar fields, so they match GreenPT's list by
-construction, while regolo/* rows are Regolo's EUR list converted at 1.16 -
-the rows record those converted dollar figures (apertus-70b 1.16/3.944,
-qwen3.5-122b 0.696/3.944), since the conversion is what the co-op actually
-pays. Regolo's own list is the per-token catalogue embedded in
-https://regolo.ai/models (a `regolo_model_list` JSON blob in the page HTML,
+the rate now and agree with the row). Since 2026-11-18 the co-op states every
+EUR-quoted model in its dollar fields at the policy rate FX 1.16, so
+both greenpt/* and regolo/* rows are the provider's EUR list times 1.16 and
+always sit a little above the figure on the provider's own page (the EUR list
+for greenpt/glm-5.3 is 1.10/4.40/0.275, the row and the config both say
+1.276/5.104/0.319). Copying a provider's EUR numerals into a row under-states
+co-op spend by the FX gap, which is the same mistake the co-op's own config
+header warns its operators against. Tinfoil quotes dollars, so tinfoil/* rows
+match its list directly. Regolo's own list is the per-token catalogue embedded
+in https://regolo.ai/models (a `regolo_model_list` JSON blob in the page HTML,
 mirrored by the visible pricing table), plus its rate announcements at
 https://regolo.ai/pricing-update/.
 
