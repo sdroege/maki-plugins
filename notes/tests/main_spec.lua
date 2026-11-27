@@ -108,7 +108,7 @@ local CTX_ERR
 local maki = {
   -- Gate for context_usage: answer as a host new enough to have ctx:context().
   version = setmetatable({
-    ge = function()
+    gt = function()
       return true
     end,
   }, {

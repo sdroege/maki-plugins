@@ -19,7 +19,7 @@ For cross-session, project-scoped notes use the built-in `memory` tool.
   subagent calling it compacts its own conversation.
 - A `context_usage` tool reporting the calling agent's own context: tokens in
   use, window size, percentage. A subagent sees its own window, never the
-  parent's. Pairs with `compact`. Needs maki 0.7.5 or newer, and is skipped
+  parent's. Pairs with `compact`. Needs maki newer than 0.7.4, and is skipped
   silently on older hosts.
 - A `TurnComplete` listener that nudges the model to save important state to
   `notes` as the context window fills, at 40%, 60%, and 80% of the window
@@ -49,8 +49,9 @@ For cross-session, project-scoped notes use the built-in `memory` tool.
 ## Install
 
 Requires maki 0.7.2 or newer. The `context_usage` tool and its prompt
-hint need 0.7.5 or newer, the release providing `ctx:context()`; older
-hosts load the plugin without them.
+hint need maki newer than 0.7.4, the line that provides `ctx:context()`
+including its `0.7.5-dev` builds; older hosts load the plugin without
+them.
 
 > **Note:** the `defer` verdict of `agent.compact.before`, the `task`
 > option of `maki.session.notify`, `maki.session.request_compact`, and

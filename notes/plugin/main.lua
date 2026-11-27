@@ -330,9 +330,10 @@ Never batch this call with others: the summary swallows their results before you
 
 -- The reminders only catch the steps; this is the number the model can ask
 -- for itself. Scoped to the calling agent: a subagent fills its own window,
--- so it must not gauge its room against the parent's. The API lands in
--- 0.7.5; older hosts load the plugin without the tool and its hint.
-local has_context_api = maki.version.ge(maki.version(), "0.7.5")
+-- so it must not gauge its room against the parent's. The API lands with
+-- 0.7.5, whose -dev builds also pass; older hosts load the plugin without
+-- the tool and its hint.
+local has_context_api = maki.version.gt(maki.version(), "0.7.4")
 
 if has_context_api then
   maki.api.register_tool({
