@@ -346,7 +346,7 @@ if has_context_api then
     },
 
     handler = function(_input, ctx)
-      local usage, err = ctx:context()
+      local usage, err = ctx:context_usage()
       if not usage then
         return { llm_output = "error: " .. tostring(err), is_error = true }
       end

@@ -49,13 +49,13 @@ For cross-session, project-scoped notes use the built-in `memory` tool.
 ## Install
 
 Requires maki 0.7.2 or newer. The `context_usage` tool and its prompt
-hint need maki newer than 0.7.4, the line that provides `ctx:context()`
+hint need maki newer than 0.7.4, the line that provides `ctx:context_usage()`
 including its `0.7.5-dev` builds; older hosts load the plugin without
 them.
 
 > **Note:** the `defer` verdict of `agent.compact.before`, the `task`
 > option of `maki.session.notify`, `maki.session.request_compact`, and
-> `ctx:context()` (maki 0.7.5) are not released upstream yet. Build
+> `ctx:context_usage()` (maki 0.7.5) are not released upstream yet. Build
 > maki from the [`dev` branch](https://github.com/sdroege/maki/tree/dev)
 > for now. Everything else this plugin uses is upstream.
 

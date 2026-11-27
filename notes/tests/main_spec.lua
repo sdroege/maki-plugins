@@ -106,7 +106,7 @@ local CTX_USAGE
 local CTX_ERR
 
 local maki = {
-  -- Gate for context_usage: answer as a host new enough to have ctx:context().
+  -- Gate for context_usage: answer as a host new enough to have ctx:context_usage().
   version = setmetatable({
     gt = function()
       return true
@@ -223,7 +223,7 @@ local ctx = setmetatable({}, {
         return "S1"
       end
     end
-    if key == "context" then
+    if key == "context_usage" then
       return function()
         if CTX_ERR then
           return nil, CTX_ERR
@@ -387,7 +387,7 @@ local usage = api.tools["context_usage"]
 check("context_usage registered", usage ~= nil, true)
 CTX_USAGE = { size = 42300, window = 200000 }
 check("usage output", usage.handler({}, ctx), "context 42300 / 200000 tokens (21% used)")
-CTX_ERR = "ctx:context needs a handler ctx"
+CTX_ERR = "ctx:context_usage needs a handler ctx"
 local missing = usage.handler({}, ctx)
 check("missing gauge errors", missing.is_error, true)
 check("error reaches the model", missing.llm_output:find("handler ctx", 1, true) ~= nil, true)
