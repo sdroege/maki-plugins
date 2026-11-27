@@ -16,6 +16,9 @@ renewable energy (GreenPT) or publicly developed sovereign models
   `inference-coop/<provider>/<model>` in `/model` and the picker.
 - Curated rows for the 8 chat models, with context windows, vision support
   and prices from the co-op's published model list.
+- `/usage` from the co-op's own meter: the allowance window you are in, what
+  has been spent against it and when it resets, the same figures the member
+  dashboard shows.
 - Thinking uses the standard `reasoning_effort` spelling, with each row
   spelling its own `thinking_fields` ladder: off sends `reasoning_effort =
   "none"` where the model accepts it, each named level sends itself, and a
@@ -51,18 +54,43 @@ API usage draws from the same monthly allowance as the co-op's chat. The
 recorded prices are what the co-op pays the provider, not what you pay, so
 maki's cost sums track co-op spend rather than a bill.
 
+### The co-op's meter behind `/usage`
+
+`/usage` shows the co-op's own meter, the number the dashboard shows, read off
+the gateway with the key you already set: `GET /key/info` names the budget team
+behind the key, and `GET /team/info` on that team carries the spend and the cap.
+Both are LiteLLM management routes at the host root, so they are fetched on the
+gateway's origin rather than under `/v1`. Team spend counts the chat and every
+API key at once, which is what the co-op meters; what a single key has spent is
+lifetime for that key and says nothing about the allowance.
+
+Three things the gateway cannot tell an API key:
+
+- The split between the monthly allowance and any credit pack. The co-op keeps
+  purchased credit in its portal database and pushes only the sum to the
+  gateway, so a $15 allowance plus a $10 pack reads as one $25 cap. The dollar
+  line is the one to read; the percentage is of the combined cap.
+- The per-day and per-model history behind the dashboard's charts. `/spend/logs`
+  answers to the co-op's master key, and the daily-activity routes refuse a
+  member key outright, so `by_model_today` stays empty here.
+- The allowance as a figure of its own. The window is the co-op's, 30 days
+  pinned to your billing day, so the reset `/usage` reports is the gateway's,
+  not a calendar month.
+
 ## Keeping the table current
 
 The curated table covers the co-op's chat models. Check these when the co-op
 adds models or rates change:
 
 - Member-facing model list, context windows, vision support:
-  https://git.inference.coop/co-op/docs/src/branch/main/models.md
+  https://git.inference.coop/co-op/docs/src/branch/main/guides/models.md
 - Authoritative pricing, including the cached-input rates:
   https://git.inference.coop/code/litellm/src/branch/main/config.yaml
 - Regolo's own catalogue and rates, for the pricing of regolo/* rows:
   https://regolo.ai/models (announcements: https://regolo.ai/pricing-update/)
-- API usage and auth: https://git.inference.coop/co-op/docs/src/branch/main/api-access.md
+- API usage and auth: https://git.inference.coop/co-op/docs/src/branch/main/guides/api-access.md
+  (it documents the chat and completion endpoints only: the usage routes above
+  are LiteLLM's own, and the docs list no usage endpoint for members)
 
 The docs state the two stay in sync: the LiteLLM config holds the numbers,
 models.md mirrors them. In practice they disagree, and each in its own way,
