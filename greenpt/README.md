@@ -12,10 +12,10 @@ API no longer lists.
   over the `greenpt` name (listed as `providers = ["greenpt"]` in
   `plugin.toml`, shown in the install approval prompt) and receives the key
   saved for it.
-- Curated rows for glm-5.3, glm-5.3-flash, kimi-k3, deepseek-v4.1-flash,
-  deepseek-v4.1-flash-1017 and minimax-m3, with prices (GreenPT's list in
-  EUR per 1M tokens, stored in maki's dollar fields as-is), context
-  windows, and vision and thinking support.
+- Curated rows for glm-5.3, glm-5.3-flash, kimi-k3.1-pro,
+  deepseek-v4.1-flash-1017 and minimax-m3, with GreenPT's own EUR rates per 1M
+  tokens, context windows, the output caps their cards declare, and vision and
+  thinking support.
 - GreenPT bills no cache write, so `cache_write` is 0.0. It enables reasoning
   by default, so every row spells its own `thinking_fields` ladder: off sends
   `reasoning_effort = "none"`, each named level sends itself, and a mode the
@@ -42,8 +42,11 @@ model card or a `/v1/models` listing has nothing to curate yet, so wait for
 the card - and a card alone is not enough when it is not a chat model: the
 `metis` entry of 30 September 2026 now has a card, but it is a decision model
 called through `POST /v1/systemone` rather than chat completions, and
-`/v1/models` does not list it either, so it stays out of the table. Status
-changes mean different things:
+`/v1/models` does not list it either, so it stays out of the table. A listing
+is no guarantee either way: `/v1/models` still answers `minimax-m2.5`, the row
+this table carried until October 2026, but its card is gone and no changelog
+line records its removal, and without a card there is no rate, context window
+or effort ladder to curate. Status changes mean different things:
 
 - A deprecated id stops answering (`400 Unsupported model`) and drops out of
   `/v1/models`, so the picker loses it through `list_models` on its own - but
@@ -55,9 +58,22 @@ changes mean different things:
 Whatever the table does not list, `list_models` filters out, which is also how
 the embedding, speech and rerank ids stay out of the picker.
 
-Prices are the EU endpoint's list, in EUR per 1M tokens, stored as-is in
-maki's dollar fields. The US endpoint (`api.us.greenpt.ai`) serves a subset
-at its own prices, so do not mix the two: the plugin targets the EU default.
+Prices are GreenPT's EU endpoint list in EUR per 1M tokens - the US endpoint
+(`api.us.greenpt.ai`) serves a subset at its own prices, so do not mix the two:
+the plugin targets the EU default. GreenPT quotes and bills in EUR while maki
+counts in dollars, so the rows hold GreenPT's EUR rates verbatim and a single
+`EUR_TO_USD` factor converts them where the table is registered. Keep it that
+way: writing dollars into a row makes it unreadable against its model card, and
+two conversions (here and in the price) drift apart. The factor is the European
+Central Bank's daily euro reference rate, and it takes one edit to refresh:
+
+```sh
+curl -s "https://data-api.ecb.europa.eu/service/data/EXR/D.USD.EUR.SP00.A?lastNObservations=1&format=csvdata" | tail -1
+```
+
+GreenPT's own list prices are the thing to keep exact; the rate only has to be
+current enough that the cost lines mean something, so refreshing it on a table
+sync is enough.
 
 When adding a model, copy the ladder straight off the `/reasoning` page and
 spare a thought for the trap the table layout exists to avoid: never declare
